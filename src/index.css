@@ -1,0 +1,47 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/outfit';
+@import '@fontsource-variable/inter';
+
+@theme {
+  --font-sans:
+    'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Outfit Variable', 'Inter Variable', system-ui, sans-serif;
+
+  --color-abyss: #06202b;
+  --color-deep: #0c2c3e;
+  --color-kelp: #2c6a74;
+  --color-foam: #eaf6f8;
+  --color-mist: #a3bac1;
+  --color-signal: #4fd6c8;
+
+  --animate-pin-ring: pin-ring 2.6s ease-in-out infinite;
+
+  @keyframes pin-ring {
+    0%,
+    100% {
+      transform: scale(0.86);
+      opacity: 0.85;
+    }
+    50% {
+      transform: scale(1.06);
+      opacity: 0.5;
+    }
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-abyss);
+  color: var(--color-foam);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-signal);
+  outline-offset: 2px;
+}

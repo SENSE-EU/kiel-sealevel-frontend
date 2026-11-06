@@ -1,0 +1,41 @@
+{
+  "appName": "SEALEVEL",
+  "language": {
+    "label": "Sprache",
+    "de": "Deutsch",
+    "en": "English"
+  },
+  "status": {
+    "loading": "Wird geladen…",
+    "loadingScene": "Szene wird geladen… {{progress}} %",
+    "unavailableTitle": "Die Inhalte sind gerade nicht erreichbar",
+    "unavailableBody": "Bitte versuche es gleich noch einmal.",
+    "retry": "Erneut versuchen",
+    "notFoundTitle": "Seite nicht gefunden",
+    "notFoundBody": "Diese Seite gibt es nicht oder sie wurde verschoben.",
+    "crashTitle": "Etwas ist schiefgelaufen",
+    "crashBody": "Bitte lade die Seite neu.",
+    "reload": "Neu laden",
+    "backHome": "Zurück zum Anfang",
+    "noWebgl": "3D ist auf diesem Gerät nicht verfügbar. Alle Inhalte findest du weiterhin in der Liste der Stationen.",
+    "emptyTitle": "Noch keine Szene",
+    "emptyBody": "Hier gibt es noch nichts zu sehen. Schau bald wieder vorbei."
+  },
+  "scene": {
+    "canvasLabel": "3D-Unterwasserszene. Zum Umsehen ziehen oder die Pfeiltasten verwenden.",
+    "viewpoints": "Standpunkte",
+    "previousViewpoint": "Vorheriger Standpunkt",
+    "nextViewpoint": "Nächster Standpunkt",
+    "hotspots": "Stationen",
+    "openHotspot": "Öffnen: {{title}}",
+    "visited": "besucht",
+    "counter": "{{visited}} von {{total}}",
+    "counterLabel": "{{visited}} von {{total}} Stationen besucht",
+    "closePanel": "Schließen",
+    "hotspotNumber": "Station {{number}}",
+    "mediaImage": "Bild",
+    "mediaVideo": "Video",
+    "playVideo": "Video abspielen",
+    "pauseVideo": "Video anhalten"
+  }
+}

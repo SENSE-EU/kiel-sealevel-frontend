@@ -1,0 +1,41 @@
+{
+  "appName": "SEALEVEL",
+  "language": {
+    "label": "Language",
+    "de": "Deutsch",
+    "en": "English"
+  },
+  "status": {
+    "loading": "Loading…",
+    "loadingScene": "Loading scene… {{progress}}%",
+    "unavailableTitle": "We can't reach the content right now",
+    "unavailableBody": "Please try again in a moment.",
+    "retry": "Try again",
+    "notFoundTitle": "Page not found",
+    "notFoundBody": "This page doesn't exist or has moved.",
+    "crashTitle": "Something went wrong",
+    "crashBody": "Please reload the page.",
+    "reload": "Reload",
+    "backHome": "Back to the start",
+    "noWebgl": "3D isn't available on this device. You can still read everything from the list of points of interest.",
+    "emptyTitle": "No scene yet",
+    "emptyBody": "There is nothing to show yet. Please check back soon."
+  },
+  "scene": {
+    "canvasLabel": "3D underwater scene. Drag or use the arrow keys to look around.",
+    "viewpoints": "Viewpoints",
+    "previousViewpoint": "Previous viewpoint",
+    "nextViewpoint": "Next viewpoint",
+    "hotspots": "Points of interest",
+    "openHotspot": "Open: {{title}}",
+    "visited": "visited",
+    "counter": "{{visited}} of {{total}}",
+    "counterLabel": "{{visited}} of {{total}} points of interest visited",
+    "closePanel": "Close",
+    "hotspotNumber": "Hotspot {{number}}",
+    "mediaImage": "Image",
+    "mediaVideo": "Video",
+    "playVideo": "Play video",
+    "pauseVideo": "Pause video"
+  }
+}
