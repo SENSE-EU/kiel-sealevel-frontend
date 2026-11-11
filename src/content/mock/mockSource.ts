@@ -26,6 +26,11 @@ interface MockScene {
   hotspots: MockHotspot[];
 }
 
+const numbered = (from: number, to: number): MockHotspot[] =>
+  Array.from({ length: to - from + 1 }, (_, i) => ({
+    title: { de: `Station ${from + i}`, en: `Hotspot ${from + i}` },
+  }));
+
 const scenes: MockScene[] = [
   {
     slug: 'munitions',
@@ -74,6 +79,42 @@ const scenes: MockScene[] = [
         },
       },
     ],
+  },
+  {
+    slug: 'marine-biodiversity',
+    title: {
+      de: 'Meeresbiodiversität & Wassertemperatur',
+      en: 'Marine biodiversity & water temperature',
+    },
+    teaser: {
+      de: 'Kieler Förde · flache Seegraswiese',
+      en: 'Kiel Fjord · shallow seagrass meadow',
+    },
+    viewpoints: [
+      { de: 'In der Seegraswiese', en: 'Inside the seagrass meadow' },
+      { de: 'Die Renaturierungsfläche', en: 'The restoration plot' },
+      { de: 'Die Messstation', en: 'The monitoring station' },
+      { de: 'Die Muschelbank am Rand', en: 'The mussel bed at the edge' },
+    ],
+    hotspots: numbered(1, 6),
+  },
+  {
+    slug: 'stone-reefs',
+    title: { de: 'Steinfischerei & Riffe', en: 'Stone fishing & reefs' },
+    teaser: {
+      de: 'Kieler Bucht · flaches Steinriff',
+      en: 'Kiel Bay · shallow stone reef',
+    },
+    viewpoints: [
+      { de: 'Das Blockfeld', en: 'The boulder field' },
+      { de: 'Ein einzelner Findling', en: 'A single glacial erratic' },
+      {
+        de: 'Kahler Grund, wo Steine entnommen wurden',
+        en: 'Bare seabed where stones were taken',
+      },
+      { de: 'Eine Renaturierungsfläche', en: 'A restoration plot' },
+    ],
+    hotspots: numbered(1, 6),
   },
 ];
 
