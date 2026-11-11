@@ -24,6 +24,7 @@
   },
   "scene": {
     "canvasLabel": "3D underwater scene. Drag or use the arrow keys to look around.",
+    "back": "All scenes",
     "viewpoints": "Viewpoints",
     "previousViewpoint": "Previous viewpoint",
     "nextViewpoint": "Next viewpoint",

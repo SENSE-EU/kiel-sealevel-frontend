@@ -33,7 +33,7 @@ function SceneLoader({ slug }: { slug: string }) {
   if (!scene.data) return <NotFoundRoute />;
   return (
     <Suspense fallback={<FullScreenLoading />}>
-      <SceneExperience scene={scene.data} />
+      <SceneExperience scene={scene.data} locale={locale} />
     </Suspense>
   );
 }

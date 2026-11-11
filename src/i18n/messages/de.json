@@ -24,6 +24,7 @@
   },
   "scene": {
     "canvasLabel": "3D-Unterwasserszene. Zum Umsehen ziehen oder die Pfeiltasten verwenden.",
+    "back": "Alle Szenen",
     "viewpoints": "Standpunkte",
     "previousViewpoint": "Vorheriger Standpunkt",
     "nextViewpoint": "Nächster Standpunkt",
