@@ -1,6 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router';
 import { DEFAULT_LOCALE } from '@/i18n/locales';
-import { FirstSceneRoute } from '@/routes/FirstSceneRoute';
+import { LandingRoute } from '@/routes/LandingRoute';
 import { LocaleLayout } from '@/routes/LocaleLayout';
 import { NotFoundRoute } from '@/routes/NotFoundRoute';
 import { RouteError } from '@/routes/RouteError';
@@ -15,7 +15,7 @@ export const router = createBrowserRouter([
         path: ':locale',
         element: <LocaleLayout />,
         children: [
-          { index: true, element: <FirstSceneRoute /> },
+          { index: true, element: <LandingRoute /> },
           { path: 'scenes/:slug', element: <SceneRoute /> },
           { path: '*', element: <NotFoundRoute /> },
         ],

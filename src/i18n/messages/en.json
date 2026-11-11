@@ -1,9 +1,12 @@
 {
   "appName": "SEALEVEL",
-  "language": {
-    "label": "Language",
-    "de": "Deutsch",
-    "en": "English"
+  "language": { "label": "Language", "de": "Deutsch", "en": "English" },
+  "landing": {
+    "kicker": "Kiel · 3D",
+    "heading": "Dive into Kiel's waters",
+    "intro": "Three underwater stories from the fjord — munitions on the seabed, a warming seagrass meadow, and the stone reefs that were taken away.",
+    "choose": "Choose a scene to dive in",
+    "empty": "No scenes are available yet."
   },
   "status": {
     "loading": "Loading…",
@@ -16,10 +19,8 @@
     "crashTitle": "Something went wrong",
     "crashBody": "Please reload the page.",
     "reload": "Reload",
-    "backHome": "Back to the start",
-    "noWebgl": "3D isn't available on this device. You can still read everything from the list of points of interest.",
-    "emptyTitle": "No scene yet",
-    "emptyBody": "There is nothing to show yet. Please check back soon."
+    "backHome": "Back to the start page",
+    "noWebgl": "3D isn't available on this device. You can still read everything from the list of points of interest."
   },
   "scene": {
     "canvasLabel": "3D underwater scene. Drag or use the arrow keys to look around.",
