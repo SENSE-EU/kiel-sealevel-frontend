@@ -1,8 +1,8 @@
-import type { z } from 'zod';
+import { z } from 'zod';
 import {
   SceneDetailResponseSchema,
-  SceneListResponseSchema,
   SceneParamsSchema,
+  SceneSummarySchema,
 } from '@/api-contracts';
 import {
   ContentUnavailableError,
@@ -46,6 +46,26 @@ async function fetchPublic<T>(
 }
 
 /**
+ * The list is only checked as a whole for its shape; each scene is then checked on its own. A scene
+ * that breaks the contract (e.g. a malformed slug that got past the CMS's own validation) is left out
+ * with a console error, so one bad entry doesn't take the whole landing page down.
+ */
+const LooseSceneListSchema = z.object({ data: z.array(z.unknown()) });
+
+function validScenes(items: unknown[]): SceneSummary[] {
+  return items.flatMap((item) => {
+    const parsed = SceneSummarySchema.safeParse(item);
+    if (parsed.success) return [parsed.data];
+    console.error(
+      '[content] Skipped a scene that broke the contract',
+      item,
+      parsed.error,
+    );
+    return [];
+  });
+}
+
+/**
  * Asks for the requested and the fallback locale and merges them, so anything missing in one language
  * shows in the other. One failing is tolerated (e.g. a locale not enabled yet); both failing means the
  * CMS is unavailable.
@@ -76,8 +96,10 @@ export const strapiSource: ContentSource = {
     return fetchBothLocales<SceneSummary[]>(
       locale,
       async (l) =>
-        (await fetchPublic('scenes', SceneListResponseSchema, l, signal))
-          ?.data ?? [],
+        validScenes(
+          (await fetchPublic('scenes', LooseSceneListSchema, l, signal))
+            ?.data ?? [],
+        ),
       mergeById,
       signal,
     );

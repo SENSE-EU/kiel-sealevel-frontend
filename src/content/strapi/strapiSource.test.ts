@@ -57,7 +57,10 @@ function stubApi(routes: Record<string, Reply>) {
 
 const scene = (locale: string) => `/api/public/scenes/munitions?${locale}`;
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 describe('strapiSource.getScene', () => {
   it('prefers the requested locale and fills gaps from the fallback', async () => {
@@ -138,6 +141,38 @@ describe('strapiSource.listScenes', () => {
       ['A de', 'Teaser'],
       ['B en', ''],
     ]);
+  });
+
+  it('leaves out a scene that breaks the contract and keeps the rest', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const valid = {
+      id: 'a',
+      slug: 'a',
+      title: 'A',
+      teaser: '',
+      cardImage: null,
+    };
+    const badSlug = { ...valid, id: 'b', slug: 'Bad_Slug', title: 'B' };
+    stubApi({
+      '/api/public/scenes?de': { data: [valid, badSlug] },
+      '/api/public/scenes?en': { data: [valid, badSlug] },
+    });
+
+    expect((await strapiSource.listScenes('de')).map((s) => s.id)).toEqual([
+      'a',
+    ]);
+    expect(error).toHaveBeenCalled();
+  });
+
+  it('rejects a list response with the wrong shape', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    stubApi({
+      '/api/public/scenes?de': { scenes: [] },
+      '/api/public/scenes?en': { scenes: [] },
+    });
+    await expect(strapiSource.listScenes('de')).rejects.toBeInstanceOf(
+      ContentUnavailableError,
+    );
   });
 
   it('is empty when there are no scenes', async () => {

@@ -36,7 +36,8 @@ The app uses the CMS's read-only public API (see `docs/public-api.md` in kiel-se
 
 It asks for both locales (`de`, `en`) and merges them by `id`, so anything missing in the requested language falls back
 to the other one. A 404 means the scene doesn't exist in that language. Every response is checked against the shared
-Zod schemas; a response that doesn't match is treated like the CMS being down, with the details in the console.
+Zod schemas. In the scene list, a scene that doesn't match (for example a malformed slug) is left out with a console
+error and the rest still show; any other response that doesn't match is treated like the CMS being down.
 
 The schemas live in `src/api-contracts`, generated from `kiel-sealevel-cms/packages/api-contracts/src`. Don't edit that
 directory. With both repos side by side in the same folder, refresh it with `npm run contracts:sync` and commit the
