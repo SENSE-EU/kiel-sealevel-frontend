@@ -27,22 +27,27 @@ Going over logs a console warning but still loads. Bought assets never go in thi
 
 ## Strapi
 
-The app calls `GET /api/scenes` on its own origin, with explicit `populate`, once per locale (`de`, `en`). It merges the
-two by `documentId`, so anything missing in the requested language falls back to the other one. The public role only
-needs `find` and `findOne` on these types.
+The app uses the CMS's read-only public API (see `docs/public-api.md` in kiel-sealevel-cms), on its own origin:
 
-| Type      | Fields (L = localised)                                                                                                                        |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Scene     | `title` L, `slug`, `teaser` L, `cardImage`, `model`, `startViewpoint` (relation), `viewpoints` (relation), `hotspots` (relation), `credits` L |
-| Viewpoint | `name`, `anchor`, `order`, `label` L                                                                                                          |
-| Hotspot   | `title` L, `body` L, `image`, `imageAlt` L, `video`, `anchor`, `order`                                                                        |
+| Request                                  | Used for                       |
+| ---------------------------------------- | ------------------------------ |
+| `GET /api/public/scenes?locale=de`       | Scene list (`SceneSummaryDto`) |
+| `GET /api/public/scenes/:slug?locale=en` | One scene (`SceneDetailDto`)   |
 
-Assumptions to confirm with the backend:
+It asks for both locales (`de`, `en`) and merges them by `id`, so anything missing in the requested language falls back
+to the other one. A 404 means the scene doesn't exist in that language. Every response is checked against the shared
+Zod schemas; a response that doesn't match is treated like the CMS being down, with the details in the console.
 
-- **`imageAlt`** is a separate localised text field. The scope asks for a localised alt, and a Strapi media file's own
-  `alternativeText` isn't localised; it is only used if `imageAlt` is empty.
+The schemas live in `src/api-contracts`, generated from `kiel-sealevel-cms/packages/api-contracts/src`. Don't edit that
+directory. With both repos side by side in the same folder, refresh it with `npm run contracts:sync` and commit the
+result, so the frontend still builds without the CMS repo.
+
+Notes:
+
+- **Image alt text** comes from the media file's `alternativeText` in the Media Library.
 - **`body`** is a Blocks field. A plain text string also renders, but Markdown would show as raw text.
 - **`model`** empty means the built-in fallback scene is used.
 - **`teaser`** is the short line under a scene's title, such as "Kolberger Heide · Kiel outer fjord".
 - **`slug`** also picks the scene's look: slugs containing `seagrass` or `biodiversity` get the green theme, `reef` or
   `stone` the reef theme, and anything else the munitions theme.
+- **`/uploads`** URLs are root-relative, so the reverse proxy (and the dev server) must forward `/uploads` to the CMS.
