@@ -1,18 +1,27 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router';
 import { LanguageSwitch } from '@/components/LanguageSwitch';
 import { LoadingIndicator } from '@/components/LoadingIndicator';
 import { filterByAnchors } from '@/content/anchors';
 import type { Scene } from '@/content/types';
 import { themeForSlug } from '@/engine/themes';
 import { useSceneEngine } from '@/engine/useSceneEngine';
+import type { Locale } from '@/i18n/locales';
 import { useVisitedHotspots } from '@/state/visited';
+import { ChevronLeft } from './icons';
 import { HotspotList } from './HotspotList';
 import { HotspotPanel } from './HotspotPanel';
 import { PinLayer } from './PinLayer';
 import { ViewpointTray } from './ViewpointTray';
 
-export function SceneExperience({ scene }: { scene: Scene }) {
+export function SceneExperience({
+  scene,
+  locale,
+}: {
+  scene: Scene;
+  locale: Locale;
+}) {
   const { t } = useTranslation();
   const { containerRef, state } = useSceneEngine(
     scene.slug,
@@ -99,6 +108,13 @@ export function SceneExperience({ scene }: { scene: Scene }) {
 
       <header className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-3 p-4">
         <div className="flex min-w-0 items-center gap-3.5">
+          <Link
+            to={`/${locale}`}
+            aria-label={t('scene.back')}
+            className="pointer-events-auto flex size-11.5 shrink-0 items-center justify-center rounded-full border border-foam/25 bg-abyss/40 backdrop-blur-sm hover:border-signal"
+          >
+            <ChevronLeft />
+          </Link>
           <div className="min-w-0">
             <h1 className="font-display text-xl leading-tight font-semibold md:text-2xl">
               {scene.title}

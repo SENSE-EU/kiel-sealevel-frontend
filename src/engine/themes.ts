@@ -1,4 +1,4 @@
-/** Per-scene look. Free of Three.js imports, so the UI can use the tints without loading it. */
+/** Per-scene look. Free of Three.js imports, so the landing page can use the tints without loading it. */
 export interface SceneTheme {
   kind: 'munitions' | 'seagrass' | 'reef';
   skyTop: number;

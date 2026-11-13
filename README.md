@@ -1,7 +1,7 @@
 # SEALEVEL Kiel: frontend
 
-The visitor-facing app for the SENSE (WP6) underwater scenes: 3D scenes where visitors move between fixed viewpoints
-and open hotspots. All content comes from Strapi, so editors can change it without a deploy.
+The visitor-facing app for the SENSE (WP6) underwater scenes: a 2D landing page, and 3D scenes where visitors move
+between fixed viewpoints and open hotspots. All content comes from Strapi, so editors can change it without a deploy.
 
 React, TypeScript, Vite, Tailwind CSS, plain Three.js, i18next and React Router.
 
@@ -13,9 +13,6 @@ Needs Node 24.
 npm install
 npm run dev
 ```
-
-The demo shows one scene: the start URL opens the first scene from the CMS, with no landing page. The landing page and
-scenes 2 and 3 are on the local `v2` branch.
 
 This runs on built-in placeholder content and a procedural placeholder scene, with no backend needed. Open
 <http://localhost:5173>. A console warning about `hs_does_not_exist` is expected: the mock data includes a broken anchor
@@ -40,7 +37,7 @@ STRAPI_PROXY_TARGET=http://localhost:1337
 ```
 src/
   app/         Router
-  routes/      Pages: first-scene redirect, scene, errors. The locale comes from the URL (/de, /en/scenes/munitions)
+  routes/      Pages: landing, scene, errors. The locale comes from the URL (/de, /en/scenes/munitions)
   components/  UI, with the scene overlay (pins, panel, list, viewpoints) in components/scene
   content/     CMS access behind the ContentSource interface: Strapi client, mock, locale fallback
   engine/      Everything Three.js. Knows anchors, not the CMS or React (except the useSceneEngine hook)
@@ -48,8 +45,9 @@ src/
   state/       Visited hotspots, kept in localStorage
 ```
 
-- Three.js is its own chunk, so the loading state shows before it arrives.
-- The scene's look (colours, water, light) comes from `src/engine/themes.ts`. The demo has only the munitions look.
+- Three.js is its own chunk. The landing page is readable and usable before it arrives, and its 3D backdrop always uses the
+  built-in scenes, so no GLB downloads until a visitor picks a scene.
+- Each scene's look (colours, water, light) comes from `src/engine/themes.ts`, chosen by slug.
 - Fonts (Outfit, Inter) are self-hosted, so visitors make no requests to Google.
 - Hotspot pins are real DOM buttons positioned over the canvas, so they work with touch, keyboard and screen readers.
 - If the CMS is down the reverse proxy serves its cached copy. With nothing cached, the app shows a message and a retry.

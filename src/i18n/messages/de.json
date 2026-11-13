@@ -1,9 +1,12 @@
 {
   "appName": "SEALEVEL",
-  "language": {
-    "label": "Sprache",
-    "de": "Deutsch",
-    "en": "English"
+  "language": { "label": "Sprache", "de": "Deutsch", "en": "English" },
+  "landing": {
+    "kicker": "Kiel · 3D",
+    "heading": "Tauche ein in die Kieler Gewässer",
+    "intro": "Drei Unterwassergeschichten aus der Förde: Munition am Meeresgrund, eine sich erwärmende Seegraswiese und die Steinriffe, die verschwunden sind.",
+    "choose": "Wähle eine Szene zum Eintauchen",
+    "empty": "Es sind noch keine Szenen verfügbar."
   },
   "status": {
     "loading": "Wird geladen…",
@@ -16,13 +19,12 @@
     "crashTitle": "Etwas ist schiefgelaufen",
     "crashBody": "Bitte lade die Seite neu.",
     "reload": "Neu laden",
-    "backHome": "Zurück zum Anfang",
-    "noWebgl": "3D ist auf diesem Gerät nicht verfügbar. Alle Inhalte findest du weiterhin in der Liste der Stationen.",
-    "emptyTitle": "Noch keine Szene",
-    "emptyBody": "Hier gibt es noch nichts zu sehen. Schau bald wieder vorbei."
+    "backHome": "Zur Startseite",
+    "noWebgl": "3D ist auf diesem Gerät nicht verfügbar. Alle Inhalte findest du weiterhin in der Liste der Stationen."
   },
   "scene": {
     "canvasLabel": "3D-Unterwasserszene. Zum Umsehen ziehen oder die Pfeiltasten verwenden.",
+    "back": "Alle Szenen",
     "viewpoints": "Standpunkte",
     "previousViewpoint": "Vorheriger Standpunkt",
     "nextViewpoint": "Nächster Standpunkt",

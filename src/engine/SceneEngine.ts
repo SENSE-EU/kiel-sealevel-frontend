@@ -128,6 +128,22 @@ export class SceneEngine {
     return names;
   }
 
+  /** Swaps to another scene's built-in version, without any download. Used behind the landing page. */
+  showBackdrop(slug: string) {
+    this.environment.dispose();
+    if (this.model) {
+      this.scene.remove(this.model);
+      disposeObject(this.model);
+    }
+    this.theme = themeForSlug(slug);
+    this.environment = createEnvironment(this.scene, this.theme);
+    this.model = createPlaceholderScene(this.theme);
+    this.scene.add(this.model);
+    this.model.updateWorldMatrix(true, true);
+    this.hasView = false;
+    this.setView('vp_1', null);
+  }
+
   /** The camera goes to the hotspot if there is one, otherwise to the viewpoint. */
   setView(viewpointAnchor: string, hotspotAnchor: string | null) {
     const viewpoint = this.anchor(viewpointAnchor);

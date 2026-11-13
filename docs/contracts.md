@@ -17,7 +17,7 @@ replacement model keeps working as long as it keeps the names.
 - A CMS anchor that isn't in the GLB hides that hotspot or viewpoint and logs a console warning.
 
 The built-in scenes (`src/engine/placeholderScene.ts`) use `vp_1` to `vp_4` for viewpoints and `hs_1` to `hs_6` for
-hotspots.
+hotspots. The first viewpoint is also the landing page's backdrop view.
 
 ## Model budget (reference phone)
 
@@ -44,3 +44,5 @@ Assumptions to confirm with the backend:
 - **`body`** is a Blocks field. A plain text string also renders, but Markdown would show as raw text.
 - **`model`** empty means the built-in fallback scene is used.
 - **`teaser`** is the short line under a scene's title, such as "Kolberger Heide · Kiel outer fjord".
+- **`slug`** also picks the scene's look: slugs containing `seagrass` or `biodiversity` get the green theme, `reef` or
+  `stone` the reef theme, and anything else the munitions theme.

@@ -7,7 +7,7 @@ import { useScene } from '@/content/hooks';
 import { useLocale } from './LocaleLayout';
 import { NotFoundRoute } from './NotFoundRoute';
 
-// Three.js is its own chunk, so the loading state shows before it arrives.
+// Three.js is only downloaded once someone enters a scene, which keeps the landing page light.
 const SceneExperience = lazy(() =>
   import('@/components/scene/SceneExperience').then((m) => ({
     default: m.SceneExperience,
@@ -33,7 +33,7 @@ function SceneLoader({ slug }: { slug: string }) {
   if (!scene.data) return <NotFoundRoute />;
   return (
     <Suspense fallback={<FullScreenLoading />}>
-      <SceneExperience scene={scene.data} />
+      <SceneExperience scene={scene.data} locale={locale} />
     </Suspense>
   );
 }
