@@ -12,6 +12,7 @@ export type EngineState =
 
 /** Creates the engine and (re)loads the model when its URL changes, not when texts change. */
 export function useSceneEngine(
+  slug: string,
   modelUrl: string | null,
   sizeBytes: number | undefined,
 ) {
@@ -26,7 +27,7 @@ export function useSceneEngine(
 
     async function start() {
       try {
-        engine = new SceneEngine(containerRef.current!);
+        engine = new SceneEngine(containerRef.current!, slug);
         const source: ModelSource | null = modelUrl
           ? { url: modelUrl, ...(sizeBytes !== undefined && { sizeBytes }) }
           : null;
@@ -46,7 +47,7 @@ export function useSceneEngine(
       engine?.dispose();
       setProgress(0);
     };
-  }, [key, modelUrl, sizeBytes]);
+  }, [slug, key, modelUrl, sizeBytes]);
 
   let state: EngineState = { status: 'loading', progress };
   if (loaded?.key === key) {

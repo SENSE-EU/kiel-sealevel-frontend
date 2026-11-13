@@ -4,7 +4,7 @@ import { LanguageSwitch } from '@/components/LanguageSwitch';
 import { LoadingIndicator } from '@/components/LoadingIndicator';
 import { filterByAnchors } from '@/content/anchors';
 import type { Scene } from '@/content/types';
-import { SCENE_THEME } from '@/engine/themes';
+import { themeForSlug } from '@/engine/themes';
 import { useSceneEngine } from '@/engine/useSceneEngine';
 import { useVisitedHotspots } from '@/state/visited';
 import { HotspotList } from './HotspotList';
@@ -15,6 +15,7 @@ import { ViewpointTray } from './ViewpointTray';
 export function SceneExperience({ scene }: { scene: Scene }) {
   const { t } = useTranslation();
   const { containerRef, state } = useSceneEngine(
+    scene.slug,
     scene.model?.url ?? null,
     scene.model?.sizeBytes,
   );
@@ -76,7 +77,7 @@ export function SceneExperience({ scene }: { scene: Scene }) {
   return (
     <div
       className="relative h-dvh overflow-hidden"
-      style={{ background: SCENE_THEME.backdrop }}
+      style={{ background: themeForSlug(scene.slug).backdrop }}
     >
       <div
         ref={containerRef}
@@ -120,7 +121,7 @@ export function SceneExperience({ scene }: { scene: Scene }) {
         <ViewpointTray
           viewpoints={viewpoints}
           activeId={activeViewpoint?.id ?? null}
-          tint={SCENE_THEME.tint}
+          tint={themeForSlug(scene.slug).tint}
           onSelect={goToViewpoint}
         />
       </div>
@@ -146,7 +147,7 @@ export function SceneExperience({ scene }: { scene: Scene }) {
           key={activeHotspot.id}
           hotspot={activeHotspot}
           number={activeHotspotIndex + 1}
-          tint={SCENE_THEME.tint}
+          tint={themeForSlug(scene.slug).tint}
           onClose={closeHotspot}
         />
       )}

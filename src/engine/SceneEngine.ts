@@ -16,7 +16,7 @@ import { disposeObject } from './disposeObject';
 import { createEnvironment, swayOffset } from './environment';
 import { loadModel } from './loadModel';
 import { createPlaceholderScene } from './placeholderScene';
-import { SCENE_THEME, type SceneTheme } from './themes';
+import { themeForSlug, type SceneTheme } from './themes';
 
 export interface ModelSource {
   url: string;
@@ -48,7 +48,7 @@ export class SceneEngine {
   private readonly rig: CameraRig;
   private readonly highlight: AnchorHighlight;
   private environment: ReturnType<typeof createEnvironment>;
-  private readonly theme: SceneTheme = SCENE_THEME;
+  private theme: SceneTheme;
   private readonly reducedMotion: boolean;
   private readonly sway = new Vector3();
   private readonly resizeObserver: ResizeObserver;
@@ -62,7 +62,10 @@ export class SceneEngine {
   private lastFrame: number | null = null;
 
   /** Throws if WebGL isn't available; the UI then falls back to the plain list. */
-  constructor(private readonly container: HTMLElement) {
+  constructor(
+    private readonly container: HTMLElement,
+    slug: string,
+  ) {
     this.renderer = new WebGLRenderer({
       antialias: true,
       powerPreference: 'high-performance',
@@ -78,6 +81,7 @@ export class SceneEngine {
     ).matches;
     this.rig = new CameraRig(this.camera, container, this.reducedMotion);
     this.highlight = new AnchorHighlight(this.reducedMotion);
+    this.theme = themeForSlug(slug);
     this.environment = createEnvironment(this.scene, this.theme);
 
     this.resizeObserver = new ResizeObserver(() => this.resize());

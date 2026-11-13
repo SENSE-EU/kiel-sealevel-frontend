@@ -201,7 +201,7 @@ export function createEnvironment(scene: Scene, theme: SceneTheme) {
       opacity: 0.5,
     }),
   );
-  const bubbles = createBubbles();
+  const bubbles = theme.kind === 'munitions' ? createBubbles() : null;
 
   group.add(
     new HemisphereLight(theme.sun, theme.floor, 1.5),
@@ -210,7 +210,7 @@ export function createEnvironment(scene: Scene, theme: SceneTheme) {
     fish.mesh,
     particles,
   );
-  group.add(bubbles.bubbles);
+  if (bubbles) group.add(bubbles.bubbles);
   scene.add(group);
 
   return {
@@ -218,7 +218,7 @@ export function createEnvironment(scene: Scene, theme: SceneTheme) {
       particles.rotation.y = seconds * 0.008;
       particles.position.y = Math.sin(seconds * 0.15) * 0.25;
       fish.update(seconds);
-      bubbles.update(seconds);
+      bubbles?.update(seconds);
     },
     dispose() {
       scene.remove(group);
