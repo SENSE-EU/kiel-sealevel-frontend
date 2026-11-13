@@ -1,3 +1,9 @@
+import { z } from 'zod';
+import {
+  SceneDetailResponseSchema,
+  SceneParamsSchema,
+  SceneSummarySchema,
+} from '@/api-contracts';
 import {
   ContentUnavailableError,
   type ContentSource,
@@ -5,42 +11,64 @@ import {
   type SceneSummary,
 } from '@/content/types';
 import { fallbackLocale, type Locale } from '@/i18n/locales';
-import {
-  mapScene,
-  mapSummary,
-  mergeById,
-  mergeScene,
-  type RawScene,
-} from './mappers';
+import { mergeById, mergeScene } from './merge';
 
-const SUMMARY_PARAMS = { 'populate[cardImage]': 'true' };
-
-const SCENE_PARAMS = {
-  ...SUMMARY_PARAMS,
-  'populate[model]': 'true',
-  'populate[startViewpoint]': 'true',
-  'populate[viewpoints]': 'true',
-  'populate[hotspots][populate][image]': 'true',
-  'populate[hotspots][populate][video]': 'true',
-};
-
-async function fetchScenes(
-  params: Record<string, string>,
+/**
+ * GETs one of the CMS's public endpoints (`/api/public/...`, see kiel-sealevel-cms docs/public-api.md)
+ * and checks the body against the shared contract. Resolves to null on 404, which the API returns
+ * when the scene doesn't exist in that language.
+ */
+async function fetchPublic<T>(
+  path: string,
+  schema: z.ZodType<T>,
   locale: Locale,
   signal?: AbortSignal,
-): Promise<RawScene[]> {
-  const query = new URLSearchParams({ ...params, locale });
-  const response = await fetch(`/api/scenes?${query}`, { signal });
+): Promise<T | null> {
+  const response = await fetch(
+    `/api/public/${path}?${new URLSearchParams({ locale })}`,
+    { signal },
+  );
+  if (response.status === 404) return null;
   if (!response.ok) {
     throw new ContentUnavailableError(`CMS responded with ${response.status}`);
   }
-  const body = (await response.json()) as { data: RawScene[] };
-  return body.data;
+  const parsed = schema.safeParse(await response.json());
+  if (!parsed.success) {
+    console.error(
+      `[content] /api/public/${path} broke the contract`,
+      parsed.error,
+    );
+    throw new ContentUnavailableError('CMS response broke the contract', {
+      cause: parsed.error,
+    });
+  }
+  return parsed.data;
 }
 
 /**
- * Asks for the requested and the fallback locale and merges them. One failing is tolerated (e.g. a
- * locale not enabled yet); both failing means the CMS is unavailable.
+ * The list is only checked as a whole for its shape; each scene is then checked on its own. A scene
+ * that breaks the contract (e.g. a malformed slug that got past the CMS's own validation) is left out
+ * with a console error, so one bad entry doesn't take the whole landing page down.
+ */
+const LooseSceneListSchema = z.object({ data: z.array(z.unknown()) });
+
+function validScenes(items: unknown[]): SceneSummary[] {
+  return items.flatMap((item) => {
+    const parsed = SceneSummarySchema.safeParse(item);
+    if (parsed.success) return [parsed.data];
+    console.error(
+      '[content] Skipped a scene that broke the contract',
+      item,
+      parsed.error,
+    );
+    return [];
+  });
+}
+
+/**
+ * Asks for the requested and the fallback locale and merges them, so anything missing in one language
+ * shows in the other. One failing is tolerated (e.g. a locale not enabled yet); both failing means the
+ * CMS is unavailable.
  */
 async function fetchBothLocales<T>(
   locale: Locale,
@@ -68,20 +96,29 @@ export const strapiSource: ContentSource = {
     return fetchBothLocales<SceneSummary[]>(
       locale,
       async (l) =>
-        (await fetchScenes(SUMMARY_PARAMS, l, signal)).map(mapSummary),
+        validScenes(
+          (await fetchPublic('scenes', LooseSceneListSchema, l, signal))
+            ?.data ?? [],
+        ),
       mergeById,
       signal,
     );
   },
 
-  getScene(slug, locale, signal) {
+  async getScene(slug, locale, signal) {
+    // The API rejects malformed slugs with a 400; they can't match a scene, so skip the request.
+    if (!SceneParamsSchema.safeParse({ slug }).success) return null;
     return fetchBothLocales<Scene | null>(
       locale,
-      async (l) => {
-        const params = { ...SCENE_PARAMS, 'filters[slug][$eq]': slug };
-        const [raw] = await fetchScenes(params, l, signal);
-        return raw ? mapScene(raw) : null;
-      },
+      async (l) =>
+        (
+          await fetchPublic(
+            `scenes/${slug}`,
+            SceneDetailResponseSchema,
+            l,
+            signal,
+          )
+        )?.data ?? null,
       mergeScene,
       signal,
     );

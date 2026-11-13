@@ -18,7 +18,8 @@ This runs on built-in placeholder content and a procedural placeholder scene, wi
 <http://localhost:5173>. A console warning about `hs_does_not_exist` is expected: the mock data includes a broken anchor
 to show that it gets hidden.
 
-To use a real Strapi, create `.env.local`:
+To use a real Strapi (the [kiel-sealevel-cms](https://github.com/SENSE-EU/kiel-sealevel-cms) public API), create
+`.env.local`:
 
 ```sh
 VITE_CONTENT_SOURCE=strapi
@@ -30,16 +31,18 @@ STRAPI_PROXY_TARGET=http://localhost:1337
 | `npm run build`                            | Type-check and build             |
 | `npm run lint` / `typecheck` / `test`      | Checks, also run by CI           |
 | `npm run format`                           | Format with Prettier             |
+| `npm run contracts:sync`                   | Copy the CMS's API schemas in    |
 | `docker build -t kiel-sealevel-frontend .` | Production image, serves on 8080 |
 
 ## How it fits together
 
 ```
 src/
+  api-contracts/  Zod schemas of the CMS public API. Generated from kiel-sealevel-cms; don't edit
   app/         Router
   routes/      Pages: landing, scene, errors. The locale comes from the URL (/de, /en/scenes/munitions)
   components/  UI, with the scene overlay (pins, panel, list, viewpoints) in components/scene
-  content/     CMS access behind the ContentSource interface: Strapi client, mock, locale fallback
+  content/     CMS access behind the ContentSource interface: public API client, mock, locale fallback
   engine/      Everything Three.js. Knows anchors, not the CMS or React (except the useSceneEngine hook)
   i18n/        UI strings. Editorial text is localised in Strapi instead
   state/       Visited hotspots, kept in localStorage
@@ -53,7 +56,7 @@ src/
 - If the CMS is down the reverse proxy serves its cached copy. With nothing cached, the app shows a message and a retry.
 - Without WebGL, the hotspot list and panels still work.
 
-[docs/contracts.md](docs/contracts.md) covers the anchor naming the 3D team must follow and the fields expected from Strapi.
+[docs/contracts.md](docs/contracts.md) covers the anchor naming the 3D team must follow and how the app reads content from Strapi.
 
 ## Deployment
 

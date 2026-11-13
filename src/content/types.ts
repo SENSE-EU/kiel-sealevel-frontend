@@ -1,75 +1,29 @@
 import type { Locale } from '@/i18n/locales';
+import type {
+  BlockNodeDto,
+  HotspotDto,
+  InlineNodeDto,
+  LinkNodeDto,
+  MediaDto,
+  RichTextDto,
+  SceneDetailDto,
+  SceneSummaryDto,
+  TextNodeDto,
+  ViewpointDto,
+} from '@/api-contracts';
 
-export interface MediaAsset {
-  url: string;
-  alt: string;
-  sizeBytes?: number;
-}
-
-/** Strapi Blocks JSON. A plain string is also accepted, in case the field is set up as plain text. */
-export type RichText = BlockNode[] | string;
-
-export interface TextNode {
-  type: 'text';
-  text: string;
-  bold?: boolean;
-  italic?: boolean;
-  underline?: boolean;
-  strikethrough?: boolean;
-  code?: boolean;
-}
-
-export interface LinkNode {
-  type: 'link';
-  url: string;
-  children: InlineNode[];
-}
-
-export type InlineNode = TextNode | LinkNode;
-
-export type BlockNode =
-  | { type: 'paragraph' | 'quote' | 'code'; children: InlineNode[] }
-  | { type: 'heading'; level: number; children: InlineNode[] }
-  | { type: 'list'; format: 'ordered' | 'unordered'; children: BlockNode[] }
-  | { type: 'list-item'; children: InlineNode[] }
-  | { type: 'image'; image: { url: string; alternativeText?: string | null } };
-
-export interface Viewpoint {
-  id: string;
-  name: string;
-  /** Node name in the GLB. */
-  anchor: string;
-  order: number;
-  label: string;
-}
-
-export interface Hotspot {
-  id: string;
-  title: string;
-  body: RichText;
-  image: MediaAsset | null;
-  video: MediaAsset | null;
-  /** Node name in the GLB. */
-  anchor: string;
-  order: number;
-}
-
-export interface SceneSummary {
-  id: string;
-  slug: string;
-  title: string;
-  teaser: string;
-  cardImage: MediaAsset | null;
-}
-
-export interface Scene extends SceneSummary {
-  /** Null means the frontend's built-in fallback scene is used. */
-  model: MediaAsset | null;
-  startViewpointId: string | null;
-  viewpoints: Viewpoint[];
-  hotspots: Hotspot[];
-  credits: string;
-}
+// The CMS's public API contracts are the source of truth for content shapes; these are the names
+// the app uses for them. A null `model` means the built-in fallback scene is used.
+export type MediaAsset = MediaDto;
+export type RichText = RichTextDto;
+export type TextNode = TextNodeDto;
+export type LinkNode = LinkNodeDto;
+export type InlineNode = InlineNodeDto;
+export type BlockNode = BlockNodeDto;
+export type Viewpoint = ViewpointDto;
+export type Hotspot = HotspotDto;
+export type SceneSummary = SceneSummaryDto;
+export type Scene = SceneDetailDto;
 
 export interface ContentSource {
   listScenes(locale: Locale, signal?: AbortSignal): Promise<SceneSummary[]>;
