@@ -11,12 +11,14 @@ export function StatusMessage({
 }) {
   return (
     <div className="flex min-h-full flex-col items-center justify-center gap-3 p-6 text-center">
-      <h1 className="text-xl font-semibold">{title}</h1>
-      {body && <p className="max-w-md text-mist">{body}</p>}
+      <h1 className="display text-3xl font-light">{title}</h1>
+      {body && (
+        <p className="max-w-md text-sm leading-relaxed text-mist">{body}</p>
+      )}
       {action}
     </div>
   );
 }
 
 export const actionClass =
-  'inline-block rounded-full bg-signal px-5 py-2 font-medium text-abyss hover:bg-foam';
+  'mt-2 inline-flex h-11 items-center rounded-full bg-signal px-5 text-sm font-medium text-abyss transition-colors hover:bg-foam';

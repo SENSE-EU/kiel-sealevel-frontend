@@ -26,10 +26,10 @@ function HotspotPin({
   );
 
   const fill = active
-    ? 'bg-signal text-abyss border-signal'
+    ? 'border-signal bg-signal text-abyss'
     : visited
-      ? 'bg-kelp/70 text-foam border-foam'
-      : 'bg-abyss/40 text-foam border-foam';
+      ? 'border-signal/70 bg-abyss/30 text-signal'
+      : 'border-foam/70 bg-white/15 text-foam';
 
   return (
     <button
@@ -40,16 +40,20 @@ function HotspotPin({
       title={hotspot.title}
       onClick={onOpen}
       style={{ visibility: 'hidden' }}
-      className="group pointer-events-auto absolute top-0 left-0 flex size-14 items-center justify-center md:size-18"
+      className="group pointer-events-auto absolute top-0 left-0 flex size-14 items-center justify-center md:size-16"
     >
       <span
         aria-hidden
-        className="absolute inset-0 animate-pin-ring rounded-full border-2 border-signal/50 motion-reduce:animate-none"
+        className={`absolute inset-2 animate-pin-ring rounded-full border border-signal/70 motion-reduce:hidden md:inset-2.5 ${visited && !active ? 'hidden' : ''}`}
       />
       <span
-        className={`relative flex size-9 items-center justify-center rounded-full border-2 font-display text-base font-semibold transition-transform group-hover:scale-110 md:size-11 md:text-lg ${fill}`}
+        aria-hidden
+        className={`absolute inset-2 animate-pin-ring-late rounded-full border border-signal/70 motion-reduce:hidden md:inset-2.5 ${visited && !active ? 'hidden' : ''}`}
+      />
+      <span
+        className={`relative flex size-10 items-center justify-center rounded-full border text-sm font-semibold tabular-nums backdrop-blur-md transition-[transform,background-color,color] duration-300 ease-out group-hover:scale-110 md:size-11 md:text-[0.9375rem] ${fill}`}
       >
-        {number}
+        {String(number).padStart(2, '0')}
       </span>
     </button>
   );

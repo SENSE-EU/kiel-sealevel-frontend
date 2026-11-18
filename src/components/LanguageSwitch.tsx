@@ -11,7 +11,7 @@ export function LanguageSwitch() {
   return (
     <nav
       aria-label={t('language.label')}
-      className="flex gap-0.5 rounded-full border border-foam/20 bg-abyss/50 p-1 text-sm font-semibold backdrop-blur-sm"
+      className="flex h-9 items-center rounded-full panel px-1 label"
     >
       {LOCALES.map((locale) => {
         const current = i18n.language === locale;
@@ -23,7 +23,7 @@ export function LanguageSwitch() {
             hrefLang={locale}
             aria-label={t(`language.${locale}`)}
             aria-current={current ? 'true' : undefined}
-            className={`rounded-full px-3.5 py-1 uppercase ${current ? 'bg-signal text-abyss' : 'text-foam/70 hover:text-foam'}`}
+            className={`flex h-7 items-center rounded-full px-2.5 transition-colors ${current ? 'bg-signal text-abyss' : 'text-mist hover:text-foam'}`}
           >
             {locale}
           </Link>

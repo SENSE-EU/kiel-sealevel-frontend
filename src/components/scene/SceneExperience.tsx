@@ -1,19 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router';
-import { LanguageSwitch } from '@/components/LanguageSwitch';
 import { LoadingIndicator } from '@/components/LoadingIndicator';
 import { filterByAnchors } from '@/content/anchors';
 import type { Scene } from '@/content/types';
+import type { Insets } from '@/engine/SceneEngine';
 import { themeForSlug } from '@/engine/themes';
 import { useSceneEngine } from '@/engine/useSceneEngine';
 import type { Locale } from '@/i18n/locales';
 import { useVisitedHotspots } from '@/state/visited';
-import { ChevronLeft } from './icons';
-import { HotspotList } from './HotspotList';
-import { HotspotPanel } from './HotspotPanel';
+import { HotspotCarousel, HotspotPanel } from './HotspotPanel';
+import { type LayoutProps, useWide } from './layout/shared';
+import { SceneLayout } from './layout/SceneLayout';
 import { PinLayer } from './PinLayer';
-import { ViewpointTray } from './ViewpointTray';
 
 export function SceneExperience({
   scene,
@@ -33,6 +31,12 @@ export function SceneExperience({
     null,
   );
   const [activeHotspotId, setActiveHotspotId] = useState<string | null>(null);
+  const [focusedHotspotId, setFocusedHotspotId] = useState<string | null>(null);
+  const [insets, setInsets] = useState<Insets>({
+    bottom: 0,
+    left: 0,
+    right: 0,
+  });
 
   const engine = state.status === 'ready' ? state.engine : null;
   const anchors = state.status === 'ready' ? state.anchors : null;
@@ -62,13 +66,18 @@ export function SceneExperience({
     (h) => h.id === activeHotspotId,
   );
   const activeHotspot = hotspots[activeHotspotIndex] ?? null;
-
   const viewpointAnchor = activeViewpoint?.anchor;
-  const hotspotAnchor = activeHotspot?.anchor ?? null;
+  // The camera goes to the open hotspot, or else to the one the layout points at (the card in the middle
+  // of the strip, the point picked in the list). With nothing picked it goes back to the viewpoint.
+  const focusedHotspot = hotspots.find((h) => h.id === focusedHotspotId);
+  const hotspotAnchor = (activeHotspot ?? focusedHotspot)?.anchor ?? null;
+  const panelOpen = activeHotspot !== null;
   useEffect(() => {
     if (engine && viewpointAnchor)
-      engine.setView(viewpointAnchor, hotspotAnchor);
-  }, [engine, viewpointAnchor, hotspotAnchor]);
+      engine.setView(viewpointAnchor, hotspotAnchor, panelOpen);
+  }, [engine, viewpointAnchor, hotspotAnchor, panelOpen]);
+
+  useEffect(() => engine?.setInsets(insets), [engine, insets]);
 
   const openHotspot = useCallback(
     (id: string) => {
@@ -77,11 +86,49 @@ export function SceneExperience({
     },
     [markVisited],
   );
-  const goToViewpoint = useCallback((id: string) => {
-    setSelectedViewpointId(id);
-    setActiveHotspotId(null);
-  }, []);
+  // Points the camera at a hotspot without opening it, coming from the start viewpoint when the hotspot can
+  // be seen from there, or else from the viewpoint nearest to it (the 3D artist's sites are further apart
+  // than the fog reaches). Pointing at nothing goes back to the start viewpoint.
+  const startAnchor = (
+    viewpoints.find((v) => v.id === scene.startViewpointId) ?? viewpoints[0]
+  )?.anchor;
+  const focusHotspot = useCallback(
+    (id: string | null) => {
+      setFocusedHotspotId(id);
+      setSelectedViewpointId(null);
+      const hotspot = hotspots.find((h) => h.id === id);
+      if (!hotspot || !engine || !startAnchor) return;
+      if (engine.visibleFrom(startAnchor, hotspot.anchor)) return;
+      const nearest = engine.nearestViewpoint(
+        hotspot.anchor,
+        viewpoints.map((v) => v.anchor),
+      );
+      const viewpoint = viewpoints.find((v) => v.anchor === nearest);
+      if (viewpoint) setSelectedViewpointId(viewpoint.id);
+    },
+    [engine, hotspots, viewpoints, startAnchor],
+  );
   const closeHotspot = useCallback(() => setActiveHotspotId(null), []);
+
+  // On phones the open point is one card in a row of them that slides to the next one.
+  const wide = useWide();
+  // Sliding to a card also makes it the point the layout is on, so closing the card lands there.
+  const slideTo = (id: string) => {
+    openHotspot(id);
+    setFocusedHotspotId(id);
+  };
+  const tint = themeForSlug(scene.slug).tint;
+  const layoutProps: LayoutProps = {
+    scene,
+    locale,
+    hotspots,
+    visited,
+    activeHotspotId,
+    onOpenHotspot: openHotspot,
+    focusedHotspotId,
+    onFocusHotspot: focusHotspot,
+    onInsets: setInsets,
+  };
 
   return (
     <div
@@ -93,7 +140,7 @@ export function SceneExperience({
         tabIndex={0}
         role="group"
         aria-label={t('scene.canvasLabel')}
-        className="absolute inset-0 touch-none outline-none"
+        className="absolute inset-0 touch-none outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-signal"
       />
 
       {engine && (
@@ -101,46 +148,12 @@ export function SceneExperience({
           engine={engine}
           hotspots={hotspots}
           visited={visited}
-          activeHotspotId={activeHotspotId}
+          activeHotspotId={activeHotspotId ?? focusedHotspotId}
           onHotspot={openHotspot}
         />
       )}
 
-      <header className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-3 p-4">
-        <div className="flex min-w-0 items-center gap-3.5">
-          <Link
-            to={`/${locale}`}
-            aria-label={t('scene.back')}
-            className="pointer-events-auto flex size-11.5 shrink-0 items-center justify-center rounded-full border border-foam/25 bg-abyss/40 backdrop-blur-sm hover:border-signal"
-          >
-            <ChevronLeft />
-          </Link>
-          <div className="min-w-0">
-            <h1 className="font-display text-xl leading-tight font-semibold md:text-2xl">
-              {scene.title}
-            </h1>
-            <p className="truncate text-sm text-foam/60">{scene.teaser}</p>
-          </div>
-        </div>
-        <div className="pointer-events-auto flex shrink-0 flex-col items-end gap-2">
-          <LanguageSwitch />
-          <HotspotList
-            hotspots={hotspots}
-            visited={visited}
-            activeHotspotId={activeHotspotId}
-            onOpen={openHotspot}
-          />
-        </div>
-      </header>
-
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-3 md:p-5">
-        <ViewpointTray
-          viewpoints={viewpoints}
-          activeId={activeViewpoint?.id ?? null}
-          tint={themeForSlug(scene.slug).tint}
-          onSelect={goToViewpoint}
-        />
-      </div>
+      <SceneLayout {...layoutProps} />
 
       {state.status === 'loading' && (
         <div className="absolute inset-0 flex items-center justify-center bg-abyss">
@@ -152,21 +165,31 @@ export function SceneExperience({
       {state.status === 'unsupported' && (
         <p
           role="status"
-          className="absolute inset-x-4 top-32 mx-auto max-w-md rounded-xl bg-deep p-4 text-center"
+          className="absolute inset-x-4 top-32 mx-auto max-w-md rounded-card panel p-4 text-center text-sm leading-relaxed text-mist"
         >
           {t('status.noWebgl')}
         </p>
       )}
 
-      {activeHotspot && (
-        <HotspotPanel
-          key={activeHotspot.id}
-          hotspot={activeHotspot}
-          number={activeHotspotIndex + 1}
-          tint={themeForSlug(scene.slug).tint}
-          onClose={closeHotspot}
-        />
-      )}
+      {activeHotspot &&
+        (!wide ? (
+          <HotspotCarousel
+            hotspots={hotspots}
+            activeId={activeHotspot.id}
+            tint={tint}
+            onOpen={slideTo}
+            onClose={closeHotspot}
+          />
+        ) : (
+          <HotspotPanel
+            key={activeHotspot.id}
+            hotspot={activeHotspot}
+            number={activeHotspotIndex + 1}
+            total={hotspots.length}
+            tint={tint}
+            onClose={closeHotspot}
+          />
+        ))}
     </div>
   );
 }

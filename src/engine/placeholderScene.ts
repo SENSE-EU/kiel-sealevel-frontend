@@ -164,7 +164,7 @@ function createMunitions(root: Object3D) {
     pile,
     corroded,
     createBlades(16, scatter(30, 22), 0x2f7a5c),
-    viewpoint('vp_1', [0, 2.3, 13.5], [0, 2.1, 0]),
+    viewpoint('vp_1', [0.8, 2.6, 16.5], [0.8, 2.2, 0]),
     viewpoint('vp_2', [-2.4, 1.7, 3.8], [1.6, 3.4, -2]),
     viewpoint('vp_3', [5, 2.6, 7], [3, 2.2, -4]),
     viewpoint('vp_4', [-6, 3, 6], [1, 3, -2]),

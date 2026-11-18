@@ -125,7 +125,8 @@ function buildScene(mock: MockScene, locale: Locale): Scene {
     order: index + 1,
     title: h.title[locale],
     body: paragraph((h.body ?? placeholderBody)[locale]),
-    image: { url: '/placeholders/media.svg', alt: h.title[locale] },
+    // No placeholder image: a blank picture only looks like empty space. Real images come from the CMS.
+    image: null,
     video: h.video
       ? { url: '/placeholders/hotspot-video.webm', alt: '' }
       : null,

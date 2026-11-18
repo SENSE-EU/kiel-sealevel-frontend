@@ -18,6 +18,13 @@ import { loadModel } from './loadModel';
 import { createPlaceholderScene } from './placeholderScene';
 import { themeForSlug, type SceneTheme } from './themes';
 
+/** Pixels of page UI covering each edge of the scene. */
+export interface Insets {
+  bottom: number;
+  left: number;
+  right: number;
+}
+
 export interface ModelSource {
   url: string;
   sizeBytes?: number;
@@ -36,6 +43,8 @@ const WIDE_SCREEN = 768;
 const SIDE_PANEL_SHIFT = 195;
 const SHEET_SHIFT_FRACTION = 0.27;
 const SHIFT_SMOOTHING = 2.2;
+/** Height kept for the header when lifting the scene above bottom UI. */
+const HEADER_RESERVE = 96;
 
 /**
  * Owns everything WebGL. React talks to it through `load`, `setView` and `registerPin`; it knows
@@ -58,6 +67,7 @@ export class SceneEngine {
   private hasView = false;
   private focusing = false;
   private readonly viewShift = { x: 0, y: 0 };
+  private insets: Insets = { bottom: 0, left: 0, right: 0 };
   private disposed = false;
   private lastFrame: number | null = null;
 
@@ -144,8 +154,15 @@ export class SceneEngine {
     this.setView('vp_1', null);
   }
 
-  /** The camera goes to the hotspot if there is one, otherwise to the viewpoint. */
-  setView(viewpointAnchor: string, hotspotAnchor: string | null) {
+  /**
+   * The camera goes to the hotspot if there is one, otherwise to the viewpoint. `panelOpen` says whether the
+   * hotspot panel covers part of the screen, so the hotspot is kept clear of it.
+   */
+  setView(
+    viewpointAnchor: string,
+    hotspotAnchor: string | null,
+    panelOpen = hotspotAnchor !== null,
+  ) {
     const viewpoint = this.anchor(viewpointAnchor);
     if (!viewpoint) return;
     const position = viewpoint.getWorldPosition(new Vector3());
@@ -153,13 +170,57 @@ export class SceneEngine {
 
     const hotspot = hotspotAnchor ? this.anchor(hotspotAnchor) : null;
     this.highlight.set(hotspot);
-    this.focusing = hotspot !== null;
+    this.focusing = hotspot !== null && panelOpen;
     const pose = hotspot
       ? this.focusPose(hotspot, position)
       : { position, orientation };
 
     this.rig.moveTo(pose, !this.hasView);
     this.hasView = true;
+  }
+
+  /** Pixels of UI covering each edge of the scene, so it can centre in the space that's left. */
+  setInsets(insets: Insets) {
+    this.insets = insets;
+  }
+
+  /** Whether a hotspot is on screen when the camera stands at a viewpoint. */
+  visibleFrom(viewpointAnchor: string, hotspotAnchor: string) {
+    const viewpoint = this.anchor(viewpointAnchor);
+    const hotspot = this.anchor(hotspotAnchor);
+    if (!viewpoint || !hotspot) return false;
+    const probe = new PerspectiveCamera(
+      this.camera.fov,
+      this.camera.aspect,
+      this.camera.near,
+      this.camera.far,
+    );
+    viewpoint.getWorldPosition(probe.position);
+    viewpoint.getWorldQuaternion(probe.quaternion);
+    probe.updateMatrixWorld();
+    const { x, y, z } = this.bounds(hotspot).center.clone().project(probe);
+    return z < 1 && Math.abs(x) <= 0.9 && Math.abs(y) <= 0.9;
+  }
+
+  /** Of the given viewpoint anchors, the one closest to a hotspot: where the camera should come from. */
+  nearestViewpoint(hotspotAnchor: string, viewpointAnchors: string[]) {
+    const hotspot = this.anchor(hotspotAnchor);
+    if (!hotspot) return null;
+    const target = this.bounds(hotspot).center;
+    let best: string | null = null;
+    let bestDistance = Infinity;
+    for (const name of viewpointAnchors) {
+      const viewpoint = this.anchor(name);
+      if (!viewpoint) continue;
+      const distance = viewpoint
+        .getWorldPosition(new Vector3())
+        .distanceTo(target);
+      if (distance < bestDistance) {
+        best = name;
+        bestDistance = distance;
+      }
+    }
+    return best;
   }
 
   /** Keeps a DOM element positioned over an anchor. Returns the function to stop doing so. */
@@ -246,8 +307,13 @@ export class SceneEngine {
   private updateViewShift(delta: number) {
     const { clientWidth: width, clientHeight: height } = this.container;
     const wide = width >= WIDE_SCREEN;
-    const goalX = this.focusing && wide ? SIDE_PANEL_SHIFT : 0;
-    const goalY = this.focusing && !wide ? height * SHEET_SHIFT_FRACTION : 0;
+    // Side panels push the scene sideways; bottom UI lifts it into the space below the header.
+    const { bottom, left, right } = this.insets;
+    const goalX =
+      (this.focusing && wide ? SIDE_PANEL_SHIFT : 0) + (right - left) / 2;
+    const lift = Math.max(0, (bottom - HEADER_RESERVE) / 2);
+    const goalY =
+      (this.focusing && !wide ? height * SHEET_SHIFT_FRACTION : 0) + lift;
     const ease = this.reducedMotion
       ? 1
       : 1 - Math.exp(-SHIFT_SMOOTHING * delta);
