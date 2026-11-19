@@ -17,7 +17,7 @@ export function SceneCard({
   const sheen =
     'linear-gradient(160deg, rgb(255 255 255 / 0.12), rgb(255 255 255 / 0.03) 50%)';
   const image = scene.cardImage
-    ? `, linear-gradient(rgb(3 21 32 / 0.2), rgb(3 21 32 / 0.85)), url("${scene.cardImage.url}")`
+    ? `, linear-gradient(rgb(3 21 32 / 0.2), rgb(3 21 32 / 0.85)), url(${JSON.stringify(scene.cardImage.url)})`
     : '';
 
   return (
