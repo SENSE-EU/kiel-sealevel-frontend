@@ -14,20 +14,17 @@ npm install
 npm run dev
 ```
 
-This runs on built-in placeholder content and a procedural placeholder scene, with no backend needed. Open
-<http://localhost:5173>. A console warning about `hs_does_not_exist` is expected: the mock data includes a broken anchor
-to show that it gets hidden.
+This reads content from a local [kiel-sealevel-cms](https://github.com/SENSE-EU/kiel-sealevel-cms) on
+<http://localhost:1337> (start it first, see that repo's README), through the dev server's proxy for `/api` and `/uploads`.
+Open <http://localhost:5173>. To use a CMS somewhere else, set `STRAPI_PROXY_TARGET` in `.env.local`.
 
-To use a real Strapi (the [kiel-sealevel-cms](https://github.com/SENSE-EU/kiel-sealevel-cms) public API), create
-`.env.local`:
-
-```sh
-VITE_CONTENT_SOURCE=strapi
-STRAPI_PROXY_TARGET=http://localhost:1337
-```
+To work without a backend, run `npm run dev:mock` instead: built-in placeholder content and a procedural placeholder
+scene. A console warning about `hs_does_not_exist` is expected there: the mock data includes a broken anchor to show that
+it gets hidden.
 
 | Command                                    | What it does                     |
 | ------------------------------------------ | -------------------------------- |
+| `npm run dev:mock`                         | Run on placeholder content       |
 | `npm run build`                            | Type-check and build             |
 | `npm run lint` / `typecheck` / `test`      | Checks, also run by CI           |
 | `npm run format`                           | Format with Prettier             |
@@ -51,7 +48,7 @@ src/
 - Three.js is its own chunk. The landing page is readable and usable before it arrives, and its 3D backdrop always uses the
   built-in scenes, so no GLB downloads until a visitor picks a scene.
 - Each scene's look (colours, water, light) comes from `src/engine/themes.ts`, chosen by slug.
-- Fonts (Outfit, Inter) are self-hosted, so visitors make no requests to Google.
+- The font (Plus Jakarta Sans) is self-hosted, so visitors make no requests to Google.
 - Hotspot pins are real DOM buttons positioned over the canvas, so they work with touch, keyboard and screen readers.
 - If the CMS is down the reverse proxy serves its cached copy. With nothing cached, the app shows a message and a retry.
 - Without WebGL, the hotspot list and panels still work.

@@ -48,6 +48,8 @@ Notes:
 - **Image alt text** comes from the media file's `alternativeText` in the Media Library.
 - **`body`** is a Blocks field. A plain text string also renders, but Markdown would show as raw text.
 - **`model`** empty means the built-in fallback scene is used.
+- **`credits`** shows at the bottom of the scene's points-of-interest menu (top right), when it isn't empty.
+- **Scene order** on the landing page is the order the API returns, currently by slug.
 - **`teaser`** is the short line under a scene's title, such as "Kolberger Heide · Kiel outer fjord".
 - **`slug`** also picks the scene's look: slugs containing `seagrass` or `biodiversity` get the green theme, `reef` or
   `stone` the reef theme, and anything else the munitions theme.

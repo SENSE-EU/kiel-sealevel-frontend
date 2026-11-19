@@ -11,11 +11,14 @@ export function HotspotList({
   visited,
   activeHotspotId,
   onOpen,
+  credits,
 }: {
   hotspots: Hotspot[];
   visited: string[];
   activeHotspotId: string | null;
   onOpen: (id: string) => void;
+  /** The scene's credits from the CMS, shown under the list when there are any. */
+  credits?: string;
 }) {
   const { t } = useTranslation();
   const details = useRef<HTMLDetailsElement>(null);
@@ -67,6 +70,11 @@ export function HotspotList({
             </li>
           ))}
         </ol>
+        {credits && (
+          <p className="mx-2.5 mt-1.5 border-t border-line pt-2 pb-1.5 text-xs leading-snug text-dim">
+            {credits}
+          </p>
+        )}
       </div>
     </details>
   );
