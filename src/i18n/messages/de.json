@@ -1,6 +1,10 @@
 {
   "appName": "SEALEVEL",
-  "language": { "label": "Sprache", "de": "Deutsch", "en": "English" },
+  "language": {
+    "label": "Sprache",
+    "de": "Deutsch",
+    "en": "English"
+  },
   "landing": {
     "kicker": "Kiel · 3D",
     "heading": "Tauche ein in die Kieler Gewässer",
@@ -25,19 +29,25 @@
   "scene": {
     "canvasLabel": "3D-Unterwasserszene. Zum Umsehen ziehen oder die Pfeiltasten verwenden.",
     "back": "Alle Szenen",
-    "viewpoints": "Standpunkte",
-    "previousViewpoint": "Vorheriger Standpunkt",
-    "nextViewpoint": "Nächster Standpunkt",
     "hotspots": "Stationen",
     "openHotspot": "Öffnen: {{title}}",
     "visited": "besucht",
     "counter": "{{visited}} von {{total}}",
     "counterLabel": "{{visited}} von {{total}} Stationen besucht",
     "closePanel": "Schließen",
-    "hotspotNumber": "Station {{number}}",
+    "expandPanel": "Vergrößern",
+    "collapsePanel": "Verkleinern",
+    "hotspotNumber": "Station {{number}} / {{total}}",
     "mediaImage": "Bild",
     "mediaVideo": "Video",
     "playVideo": "Video abspielen",
-    "pauseVideo": "Video anhalten"
+    "pauseVideo": "Video anhalten",
+    "overview": "Überblick",
+    "pointsCount": "{{count}} Stationen",
+    "read": "Lesen",
+    "previousPoint": "Vorherige Station",
+    "nextPoint": "Nächste Station",
+    "arrowsHint": "Wische oder nutze die Pfeile, um sie zu entdecken",
+    "pickHint": "Nutze die Pfeile oder tippe auf eine Nummer"
   }
 }

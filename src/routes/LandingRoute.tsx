@@ -36,13 +36,16 @@ export function LandingRoute() {
         </Suspense>
       </div>
 
-      <div className="relative flex min-h-dvh flex-col gap-6 p-6">
+      <div className="relative flex min-h-dvh flex-col gap-8 p-5 md:p-6">
         <header className="flex items-center justify-between gap-3">
-          <span className="font-display text-2xl font-bold tracking-[0.18em]">
-            {t('appName')}
+          <span className="flex items-center gap-2.5">
+            <span aria-hidden className="size-2 rounded-full bg-signal" />
+            <span className="text-[0.8125rem] font-semibold tracking-[0.28em]">
+              {t('appName')}
+            </span>
           </span>
           <div className="flex items-center gap-4">
-            <span className="hidden text-sm tracking-wider text-foam/60 sm:inline">
+            <span className="hidden label text-signal sm:inline">
               {t('landing.kicker')}
             </span>
             <LanguageSwitch />
@@ -50,11 +53,11 @@ export function LandingRoute() {
         </header>
 
         <main className="flex flex-1 flex-col justify-between gap-8">
-          <div className="mt-4 max-w-xl">
-            <h1 className="font-display text-4xl leading-tight font-light md:text-[3.25rem]">
+          <div className="mt-6 max-w-2xl md:mt-10">
+            <h1 className="display text-[2.875rem] leading-[1] font-light tracking-[-0.02em] text-balance md:text-[5rem]">
               {t('landing.heading')}
             </h1>
-            <p className="mt-3 text-lg leading-7 text-foam/70">
+            <p className="mt-5 max-w-xl text-lg leading-[1.5] text-pretty text-mist md:text-xl">
               {t('landing.intro')}
             </p>
           </div>
@@ -68,10 +71,10 @@ export function LandingRoute() {
             )}
             {scenes.status === 'ready' &&
               (scenes.data.length === 0 ? (
-                <p className="text-mist">{t('landing.empty')}</p>
+                <p className="text-sm text-mist">{t('landing.empty')}</p>
               ) : (
                 <>
-                  <div className="grid items-end gap-4 md:grid-cols-3 md:gap-5">
+                  <div className="grid items-stretch gap-2.5 md:grid-cols-3 md:gap-3">
                     {scenes.data.map((scene, index) => (
                       <SceneCard
                         key={scene.id}
@@ -82,7 +85,7 @@ export function LandingRoute() {
                       />
                     ))}
                   </div>
-                  <p className="mt-4 text-center text-sm text-foam/40">
+                  <p className="mt-4 text-center label text-foam/70">
                     {t('landing.choose')}
                   </p>
                 </>
