@@ -11,6 +11,8 @@ coverage
 
 # 3D source and bought assets must never enter this public repo. GLBs live in Strapi media.
 *.glb
+# Except the S1 demo package, committed on purpose for the demo (see docs/contracts.md).
+!public/local/scenes/**/*.glb
 *.gltf
 *.fbx
 *.obj
