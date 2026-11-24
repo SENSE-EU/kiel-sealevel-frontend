@@ -21,3 +21,4 @@ coverage
 *.max
 *.unitypackage
 *.ktx2
+*.tsbuildinfo
