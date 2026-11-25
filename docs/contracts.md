@@ -15,6 +15,27 @@ replacement model keeps working as long as it keeps the names.
 - **Hotspot node:** a mesh or group, which glows when selected and is framed by the camera, or an empty, which is
   just a point to look at, with no highlight.
 - A CMS anchor that isn't in the GLB hides that hotspot or viewpoint and logs a console warning.
+- **Look-at partners (optional):** a viewpoint `vp_<name>` with a `vp_<name>_target` node looks at that node
+  instead of using its own rotation. A hotspot `hs_<name>` with a `hs_<name>_view` node is framed from that node.
+  This is how the 3D team's S1 scene is built.
+
+## Local scene packages
+
+Some deliveries are several files rather than one GLB: the S1 munitions scene (handoff of 17 Nov 2026) has a base
+pack with the sea floor and anchors, a chapter pack for the mine 20 m away, instanced vegetation, and close-up
+texture packs fetched when the camera gets near the mine or the broken casing. It also brings its own water look
+(Baltic fog, caustics, light shafts, marine snow), ported in `src/engine/underwater/`.
+
+The package files live in `public/local/scenes/<slug>/` and ship with the build; when they are there, the app
+uses them for that scene instead of the CMS model, and falls back to the CMS model when they are not. The files and
+settings for each package are listed in `src/engine/underwater/localPackages.ts`. The S1 files (`seabed_scene.glb`,
+`chapter_mine.glb`, `vegetation.glb`, `vegetation_instances.json`, `detail_mine.glb`, `detail_casing.glb`) are
+committed in `public/local/scenes/munitions/` for the demo, as an exception to the no-GLB rule in `.gitignore`.
+
+The local content still uses the placeholder anchors (`vp_1`, `hs_1` and so on), so the package maps them to the
+model's names. Chapter 3 (the bubble curtain, hotspots 5 and 6) isn't built yet, so those stay hidden. Before
+this goes to production, the CMS needs a way to hold a multi-file scene, and the CMS content should use the
+model's own anchor names.
 
 The built-in scenes (`src/engine/placeholderScene.ts`) use `vp_1` to `vp_4` for viewpoints and `hs_1` to `hs_6` for
 hotspots. The first viewpoint is also the landing page's backdrop view.
