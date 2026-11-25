@@ -78,6 +78,7 @@ export function SceneExperience({
   }, [engine, viewpointAnchor, hotspotAnchor, panelOpen]);
 
   useEffect(() => engine?.setInsets(insets), [engine, insets]);
+  useEffect(() => engine?.setLocale(locale), [engine, locale]);
 
   // The viewpoint a hotspot is seen from: the start viewpoint when the hotspot can be seen from there, or
   // else the one nearest to it (the 3D artist's sites are further apart than the fog reaches). Null means

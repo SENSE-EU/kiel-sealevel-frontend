@@ -19,4 +19,8 @@ export interface SceneLook {
     maxVerticalFov: number;
   };
   maxPixelRatio?: number;
+  /** Most device pixels to draw per frame; big screens drop toward 1 device pixel per CSS pixel. */
+  pixelBudget?: number;
+  /** The hotspot the camera is at (its model node name), or null. For effects tied to a hotspot. */
+  focus?(anchor: string | null): void;
 }

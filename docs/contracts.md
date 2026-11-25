@@ -21,16 +21,28 @@ replacement model keeps working as long as it keeps the names.
 
 ## Local scene packages
 
-Some deliveries are several files rather than one GLB: the S1 munitions scene (handoff of 17 Nov 2026) has a base
-pack with the sea floor and anchors, a chapter pack for the mine 20 m away, instanced vegetation, and close-up
-texture packs fetched when the camera gets near the mine or the broken casing. It also brings its own water look
-(Baltic fog, caustics, light shafts, marine snow), ported in `src/engine/underwater/`.
+Some deliveries are several files rather than one GLB: the S1 munitions scene (version of 25 Nov 2026) has a base
+pack with the sea floor and anchors, a chapter pack for the mine 20 m away, instanced vegetation and fish, close-up
+texture packs fetched when the camera gets near the mine or the broken casing, and baked algal-turf textures for
+the sea floor (`tex/`). It also brings its own look, ported from the 3D team's viewer in `src/engine/underwater/`:
+`water.ts` (Baltic fog, caustics, light shafts, marine snow, the turf), `vegetation.ts` (plants, mussel beds, gobies
+and a herring school) and `effects.ts`, two labelled "made visible" layers tied to hotspots:
+
+- **Hotspot 2** (`hs_corrosion`): the explosive fill dissolving out of the open casing, an amber trail carried
+  down-current, with the mussels in its path glowing.
+- **Hotspot 3** (`hs_survey`): a placeholder mapping AUV (built in code, no third-party asset) flying survey lanes
+  over the mine, its multibeam sonar drawn as a fan and a scan map on the floor. Timed to cross the view when the
+  camera lands. To be swapped for GEOMAR's model.
+
+The labels are written in the page language (set from React with `SceneEngine.setLocale`).
 
 The package files live in `public/local/scenes/<slug>/` and ship with the build; when they are there, the app
 uses them for that scene instead of the CMS model, and falls back to the CMS model when they are not. The files and
 settings for each package are listed in `src/engine/underwater/localPackages.ts`. The S1 files (`seabed_scene.glb`,
-`chapter_mine.glb`, `vegetation.glb`, `vegetation_instances.json`, `detail_mine.glb`, `detail_casing.glb`) are
-committed in `public/local/scenes/munitions/` for the demo, as an exception to the no-GLB rule in `.gitignore`.
+`chapter_mine.glb`, `vegetation.glb`, `vegetation_instances.json`, `detail_mine.glb`, `detail_casing.glb` and
+`tex/T_Turf_*.webp`) are committed in `public/local/scenes/munitions/` for the demo, as an exception to the no-GLB
+rule in `.gitignore`. To take a new delivery, copy those files over the old ones and compare against the viewer in
+the delivery (`python -m http.server` in its folder) before shipping.
 
 The local content still uses the placeholder anchors (`vp_1`, `hs_1` and so on), so the package maps them to the
 model's names. Chapter 3 (the bubble curtain, hotspots 5 and 6) isn't built yet, so those stay hidden. Before

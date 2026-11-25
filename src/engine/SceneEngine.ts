@@ -20,7 +20,6 @@ import { createPlaceholderScene } from './placeholderScene';
 import type { SceneLook } from './SceneLook';
 import { themeForSlug, type SceneTheme } from './themes';
 import { findLocalPackage } from './underwater/localPackages';
-import { loadScenePackage } from './underwater/scenePackage';
 
 /** Pixels of page UI covering each edge of the scene. */
 export interface Insets {
@@ -74,6 +73,8 @@ export class SceneEngine {
   private focusing = false;
   private readonly viewShift = { x: 0, y: 0 };
   private insets: Insets = { bottom: 0, left: 0, right: 0 };
+  /** The page language, for text the scene draws itself (effect labels). */
+  private locale = 'en';
   private disposed = false;
   private lastFrame: number | null = null;
 
@@ -121,11 +122,14 @@ export class SceneEngine {
       // The package brings its own water and light.
       this.look.dispose();
       try {
+        // Only scenes with a package need the underwater code, so it loads on demand.
+        const { loadScenePackage } = await import('./underwater/scenePackage');
         const loaded = await loadScenePackage(
           local,
           this.renderer,
           this.scene,
           this.camera,
+          { element: this.container, locale: () => this.locale },
           onProgress,
         );
         if (this.disposed) {
@@ -196,13 +200,22 @@ export class SceneEngine {
       this.camera.near = framing.near;
       this.camera.far = framing.far;
     }
-    this.renderer.setPixelRatio(
-      Math.min(
-        window.devicePixelRatio,
-        this.look.maxPixelRatio ?? MAX_PIXEL_RATIO,
-      ),
-    );
     this.resize();
+  }
+
+  /**
+   * Device pixels per CSS pixel: the screen's, up to the look's cap, and within its pixel budget on big
+   * screens, but never below 1 (that would upscale and look soft).
+   */
+  private pixelRatio(width: number, height: number) {
+    const cap = Math.min(
+      window.devicePixelRatio,
+      this.look.maxPixelRatio ?? MAX_PIXEL_RATIO,
+    );
+    const budget = this.look.pixelBudget;
+    return budget
+      ? Math.min(cap, Math.max(1, Math.sqrt(budget / (width * height))))
+      : cap;
   }
 
   /** Swaps to another scene's built-in version, without any download. Used behind the landing page. */
@@ -236,6 +249,7 @@ export class SceneEngine {
 
     const hotspot = hotspotAnchor ? this.anchor(hotspotAnchor) : null;
     this.highlight.set(hotspot);
+    this.look.focus?.(hotspot?.name ?? null);
     this.focusing = hotspot !== null && panelOpen;
     const pose = hotspot
       ? this.focusPose(hotspot, position)
@@ -248,6 +262,11 @@ export class SceneEngine {
   /** Pixels of UI covering each edge of the scene, so it can centre in the space that's left. */
   setInsets(insets: Insets) {
     this.insets = insets;
+  }
+
+  /** The page language, for text drawn over the scene. */
+  setLocale(locale: string) {
+    this.locale = locale;
   }
 
   /** Whether a hotspot is on screen when the camera stands at a viewpoint. */
@@ -365,6 +384,9 @@ export class SceneEngine {
   private resize() {
     const { clientWidth: width, clientHeight: height } = this.container;
     if (width === 0 || height === 0) return;
+    const ratio = this.pixelRatio(width, height);
+    if (this.renderer.getPixelRatio() !== ratio)
+      this.renderer.setPixelRatio(ratio);
     this.renderer.setSize(width, height);
     this.camera.aspect = width / height;
     const fit = (horizontal: number) =>

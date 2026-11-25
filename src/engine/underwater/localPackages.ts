@@ -5,7 +5,7 @@ import type { ScenePackage } from './scenePackage';
  * `public/local/scenes/<slug>/`; when they are there, the app uses them for that scene instead of the CMS model.
  */
 const LOCAL_PACKAGES: Record<string, ScenePackage> = {
-  // S1 seabed viewer handoff, 17 Nov 2026: the dump site and, 20 m away, the moored mine.
+  // S1 seabed viewer, version of 25 Nov 2026: the dump site and, 20 m away, the moored mine.
   munitions: {
     root: '/local/scenes/munitions/',
     base: 'seabed_scene.glb',
@@ -30,6 +30,36 @@ const LOCAL_PACKAGES: Record<string, ScenePackage> = {
       ['hs_corrosion', 0.8],
       ['hs_lifting', 1.45],
     ],
+    plume: {
+      casing: 'PROP_Shell_155mm_01',
+      hotspot: 'hs_corrosion',
+      direction: [0.96, -0.27],
+      width: 0.06,
+      length: 3.0,
+      label: {
+        en: ['Dissolved TNT', 'made visible · invisible in reality'],
+        de: ['Gelöstes TNT', 'sichtbar gemacht · in Wirklichkeit unsichtbar'],
+      },
+    },
+    // Placeholder vehicle until GEOMAR provides a real model. Lane 2 passes the hotspot 3 view, lane 3
+    // runs over the mine; 1.7 m up clears the mine's horns.
+    survey: {
+      chapter: 'mine',
+      hotspot: 'hs_survey',
+      lanes: [-5.6, -3.1, -0.6, 1.9],
+      from: -5.5,
+      to: 5.5,
+      height: 1.7,
+      speed: 1.0,
+      halfWidth: 1.6,
+      label: {
+        en: ['Multibeam sonar', 'sound, made visible · maps the seabed'],
+        de: [
+          'Fächerecholot',
+          'Schall, sichtbar gemacht · kartiert den Meeresboden',
+        ],
+      },
+    },
     // The local content still uses the generic placeholder anchors. Chapter 3 (the bubble curtain and
     // hotspots 5 and 6) isn't built yet, so those stay unmapped and are hidden.
     anchorAliases: {

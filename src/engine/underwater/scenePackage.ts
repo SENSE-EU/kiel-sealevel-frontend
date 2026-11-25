@@ -1,16 +1,13 @@
 import {
   AgXToneMapping,
   Box3,
-  CanvasTexture,
   Color,
-  DoubleSide,
   Group,
   InstancedMesh,
-  Matrix4,
   MeshStandardMaterial,
   NoToneMapping,
-  SRGBColorSpace,
   Vector3,
+  Vector4,
   type Mesh,
   type Object3D,
   type PerspectiveCamera,
@@ -21,7 +18,22 @@ import {
 } from 'three';
 import { createLoader } from '../loadModel';
 import type { SceneLook } from '../SceneLook';
-import { createUniforms, createWater, LOOK, waterize } from './water';
+import {
+  createPlume,
+  createSurvey,
+  type EffectContext,
+  type Overlay,
+  type PlumeConfig,
+  type SurveyConfig,
+} from './effects';
+import { createVegetation, type VegetationData } from './vegetation';
+import {
+  createUniforms,
+  createWater,
+  LOOK,
+  WATER_GLSL,
+  waterize,
+} from './water';
 
 /**
  * A scene the 3D team delivers as several files rather than one GLB: a base pack with the sea floor and
@@ -41,17 +53,15 @@ export interface ScenePackage {
   focus: [anchor: string, radius: number][];
   /** Content anchor names mapped to this model's nodes, for content written against other names. */
   anchorAliases?: Record<string, string>;
+  /** The dissolving fill at an open casing, shown at its hotspot. */
+  plume?: PlumeConfig;
+  /** A survey AUV flying lanes over one chapter, featured at its hotspot. */
+  survey?: SurveyConfig & { chapter: string };
 }
 
 export interface LoadedPackage {
   root: Group;
   look: SceneLook;
-}
-
-interface VegetationData {
-  sway: Record<string, number>;
-  fauna?: Record<string, unknown>;
-  instances: Record<string, number[]>;
 }
 
 const TEXTURE_KEYS = [
@@ -64,8 +74,8 @@ const TEXTURE_KEYS = [
 type TextureKey = (typeof TEXTURE_KEYS)[number];
 /** A chapter is drawn while the camera is this close to its centre, so a flight between two shows both. */
 const CHAPTER_DRAW_DISTANCE = LOOK.visibility + 4;
-/** Thin cards and branches skip the shadow pass. */
-const NO_SHADOW = /^VEG_(Eelgrass|Fuzz|RedBush)/;
+/** Every casing, the mine and the crate grow a thicker turf halo. */
+const TURF_HALO = /^PROP_(Shell|Pile_Shell|Mine|Crate)/;
 
 /** Phones get no live shadows, smaller caustics, fewer fuzz shells and a lower pixel ratio. */
 export function isPhoneTier() {
@@ -92,70 +102,17 @@ function texturesOf(root: Object3D) {
   return [...out];
 }
 
-/** Hydroid turf strands, drawn into a canvas at load: two tufts side by side, base at the bottom. */
-function makeFuzzTexture(size = 256, seed = 7) {
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = size;
-  const g = canvas.getContext('2d')!;
-  let r = seed;
-  const rnd = () => (r = (r * 16807) % 2147483647) / 2147483647;
-  const tones = [
-    '#7d7150',
-    '#8a7d58',
-    '#6c6446',
-    '#958660',
-    '#66664a',
-    '#9c8d66',
-  ];
-  g.lineCap = 'round';
-  for (let half = 0; half < 2; half++) {
-    const cx = size * (0.25 + 0.5 * half);
-    for (let i = 0; i < 70; i++) {
-      const x0 = cx + (rnd() - 0.5) * size * 0.16;
-      const length = size * (0.35 + 0.6 * rnd());
-      const bend = (rnd() - 0.5) * size * 0.16;
-      g.strokeStyle = tones[Math.floor(rnd() * tones.length)]!;
-      let px = x0;
-      let py = size;
-      for (let k = 1; k <= 10; k++) {
-        const t = k / 10;
-        const x = x0 + bend * t * t + Math.sin(t * 6 + i) * 2.0;
-        const y = size - length * t;
-        g.lineWidth = 1.6 * (1 - t) + 0.5;
-        g.globalAlpha = 1.0 - 0.55 * t;
-        g.beginPath();
-        g.moveTo(px, py);
-        g.lineTo(x, y);
-        g.stroke();
-        if (k > 3 && rnd() < 0.18) {
-          const branch = size * 0.06 * rnd();
-          const dir = rnd() < 0.5 ? -1 : 1;
-          g.lineWidth = 0.6;
-          g.beginPath();
-          g.moveTo(x, y);
-          g.lineTo(x + dir * branch, y - branch * 0.7);
-          g.stroke();
-        }
-        px = x;
-        py = y;
-      }
-    }
-  }
-  const texture = new CanvasTexture(canvas);
-  texture.colorSpace = SRGBColorSpace;
-  texture.anisotropy = 4;
-  return texture;
-}
-
 export async function loadScenePackage(
   pkg: ScenePackage,
   renderer: WebGLRenderer,
   scene: Scene,
   camera: PerspectiveCamera,
+  /** Where the effect labels go, and the language to write them in. */
+  overlay: Overlay,
   onProgress: (fraction: number) => void,
 ): Promise<LoadedPackage> {
   const phone = isPhoneTier();
-  const uniforms = createUniforms();
+  const uniforms = createUniforms(pkg.root);
   const { loader, dispose: disposeLoader } = createLoader(renderer);
   const load = (file: string, progress?: (fraction: number) => void) =>
     loader.loadAsync(pkg.root + file, (event) => {
@@ -204,7 +161,8 @@ export async function loadScenePackage(
 
   // The chapter-2 sea floor shares chapter 1's materials: patch each material once.
   const waterized = new WeakSet<MeshStandardMaterial>();
-  const fuzzShells = phone ? 3 : 5;
+  // The turf facing the camera is baked into the mine's maps; the shells only fringe the silhouette.
+  const fuzzShells = phone ? 2 : 4;
 
   /**
    * The mine's fouling fringe: a decimated copy of the prop carrying `_fuzz`, drawn as stacked shells in
@@ -225,7 +183,8 @@ export async function loadScenePackage(
     const fuzzUniforms = {
       uFuzzLen: { value: 0.03 },
       uFuzzDen: { value: 170.0 },
-      uShells: { value: fuzzShells },
+      // The outermost layer would be fully discarded, so it isn't drawn.
+      uShells: { value: fuzzShells + 1 },
     };
     material.onBeforeCompile = (
       shader: WebGLProgramParametersWithUniforms,
@@ -283,8 +242,34 @@ export async function loadScenePackage(
     parent.add(shells);
   }
 
+  // Turf halos: footprint centre and half the largest horizontal extent + 0.2 m.
+  const turfHalos = new Map<string, Vector4>();
+  const haloSize = new Vector3();
+  function addTurfHalos(pack: Object3D) {
+    pack.updateMatrixWorld(true);
+    pack.traverse((object) => {
+      if (!(object as Mesh).isMesh || !TURF_HALO.test(object.name)) return;
+      box.setFromObject(object).getCenter(centre);
+      box.getSize(haloSize);
+      turfHalos.set(
+        object.name,
+        new Vector4(
+          centre.x,
+          centre.y,
+          centre.z,
+          Math.max(haloSize.x, haloSize.z) * 0.5 + 0.2,
+        ),
+      );
+    });
+    const slots = uniforms.uTurfPts.value;
+    [...turfHalos.values()]
+      .slice(0, slots.length)
+      .forEach((halo, i) => slots[i]!.copy(halo));
+  }
+
   /** Water, shadows and chapters for a freshly loaded pack. */
   function prepare(pack: Object3D) {
+    addTurfHalos(pack);
     const fuzzProxies: Mesh[] = [];
     pack.traverse((object) => {
       const mesh = object as Mesh;
@@ -348,66 +333,30 @@ export async function loadScenePackage(
       : null,
   ]);
 
-  // Vegetation: one InstancedMesh per species and chapter, so a hidden chapter costs nothing. Fish are
-  // in the data but hidden for now, as in the artist's viewer.
-  if (vegetation) {
-    const [gltf, data] = vegetation;
-    const fuzzTexture = makeFuzzTexture();
-    const matrix = new Matrix4();
-    const position = new Vector3();
-    const group = new Group();
-    group.name = 'vegetation';
-    for (const [name, matrices] of Object.entries(data.instances)) {
-      if (data.fauna?.[name]) continue;
-      const prototype = gltf.scene.getObjectByName(name) as Mesh | undefined;
-      if (!prototype?.isMesh) {
-        console.warn(`[scene] Vegetation prototype ${name} is missing`);
-        continue;
-      }
-      let material: MeshStandardMaterial;
-      if (name.startsWith('VEG_Fuzz')) {
-        material = new MeshStandardMaterial({
-          map: fuzzTexture,
-          alphaTest: 0.35,
-          alphaToCoverage: true,
-          side: DoubleSide,
-          roughness: 0.9,
-          metalness: 0,
-        });
-        waterize(material, uniforms, { sway: 6.0 });
-      } else {
-        material = (prototype.material as MeshStandardMaterial).clone();
-        material.side = DoubleSide;
-        waterize(material, uniforms, { sway: data.sway[name] ?? 0 });
-      }
-      const byChapter = new Map<(typeof chapters)[number], number[]>();
-      for (let i = 0; i < matrices.length / 16; i++) {
-        position.fromArray(matrices, i * 16 + 12);
-        const chapter = chapterOf(position);
-        byChapter.set(chapter, [...(byChapter.get(chapter) ?? []), i]);
-      }
-      for (const [chapter, indices] of byChapter) {
-        const mesh = new InstancedMesh(
-          prototype.geometry,
-          material,
-          indices.length,
-        );
-        indices.forEach((source, k) =>
-          mesh.setMatrixAt(k, matrix.fromArray(matrices, source * 16)),
-        );
-        mesh.instanceMatrix.needsUpdate = true;
-        mesh.computeBoundingSphere();
-        mesh.name = `${name}:${chapter.id}`;
-        mesh.receiveShadow = true;
-        mesh.castShadow = !NO_SHADOW.test(name);
-        group.add(mesh);
-        chapter.objects.push(mesh);
-      }
-    }
-    root.add(group);
-  }
+  const plants = vegetation
+    ? createVegetation(vegetation[0].scene, vegetation[1], uniforms, chapterOf)
+    : null;
+  if (plants) root.add(plants.group);
 
-  const water = createWater(renderer, scene, uniforms, phone);
+  const water = createWater(renderer, scene, camera, uniforms, phone);
+
+  const effects: EffectContext = {
+    root,
+    uniforms,
+    waterGlsl: WATER_GLSL,
+    renderer,
+    camera,
+    overlay,
+    assignChapter,
+  };
+  const plume = pkg.plume ? createPlume(pkg.plume, effects) : null;
+  const surveyChapter = chapters.find(
+    (chapter) => chapter.id === pkg.survey?.chapter,
+  );
+  const survey =
+    pkg.survey && surveyChapter
+      ? createSurvey(pkg.survey, surveyChapter.centre, effects)
+      : null;
   pkg.focus.forEach(([name, radius], i) => {
     const node = findObject(name);
     const slot = uniforms.uFocus.value[i];
@@ -448,6 +397,7 @@ export async function loadScenePackage(
     const first = stage === null;
     stage = chapter;
     water.setStage(chapter.centre);
+    plants?.setStage(chapter.centre);
     if (!first) for (const pack of pkg.detail) loadDetailIfIn(pack, chapter);
   };
 
@@ -578,8 +528,15 @@ export async function loadScenePackage(
   const look: SceneLook = {
     swayScale: 0.25,
     pinRange: LOOK.visibility,
-    camera: { near: 0.05, far: 80, horizontalFov: 61.9, maxVerticalFov: 74 },
+    // Nothing past full fog needs drawing.
+    camera: {
+      near: 0.05,
+      far: LOOK.visibility,
+      horizontalFov: 61.9,
+      maxVerticalFov: 74,
+    },
     maxPixelRatio: phone ? 1.5 : 2,
+    pixelBudget: phone ? 1_000_000 : 2_500_000,
     update(seconds, delta) {
       uniforms.uTime.value = seconds;
       showChapters(camera.position);
@@ -590,9 +547,19 @@ export async function loadScenePackage(
         loadDetailNear(camera.position);
       }
       pumpUploads();
+      plants?.update(seconds);
+      plume?.update(delta);
+      survey?.update(seconds, delta);
       water.renderCaustics();
     },
+    focus(anchor) {
+      plume?.focus(anchor);
+      survey?.focus(anchor);
+    },
     dispose() {
+      plume?.dispose();
+      survey?.dispose();
+      plants?.dispose();
       water.dispose();
       disposeLoader();
       renderer.toneMapping = NoToneMapping;
