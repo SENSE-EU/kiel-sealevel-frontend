@@ -22,6 +22,7 @@ interface MockScene {
   slug: string;
   title: Localised;
   teaser: Localised;
+  credits?: Localised;
   viewpoints: Localised[];
   hotspots: MockHotspot[];
 }
@@ -38,6 +39,10 @@ const scenes: MockScene[] = [
     teaser: {
       de: 'Kolberger Heide · Kieler Außenförde',
       en: 'Kolberger Heide · Kiel outer fjord',
+    },
+    credits: {
+      de: '3D-Modell: Platzhalter · Texte: SENSE-Projekt',
+      en: '3D model: placeholder · Text: SENSE project',
     },
     viewpoints: [
       { de: 'Über einem Munitionshaufen', en: 'Above a munition pile' },
@@ -125,7 +130,8 @@ function buildScene(mock: MockScene, locale: Locale): Scene {
     order: index + 1,
     title: h.title[locale],
     body: paragraph((h.body ?? placeholderBody)[locale]),
-    image: { url: '/placeholders/media.svg', alt: h.title[locale] },
+    // No placeholder image: a blank picture only looks like empty space. Real images come from the CMS.
+    image: null,
     video: h.video
       ? { url: '/placeholders/hotspot-video.webm', alt: '' }
       : null,
@@ -158,7 +164,7 @@ function buildScene(mock: MockScene, locale: Locale): Scene {
       label: label[locale],
     })),
     hotspots,
-    credits: '',
+    credits: mock.credits?.[locale] ?? '',
   };
 }
 

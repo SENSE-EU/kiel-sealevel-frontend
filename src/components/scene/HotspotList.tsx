@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Hotspot } from '@/content/types';
 
@@ -10,27 +11,31 @@ export function HotspotList({
   visited,
   activeHotspotId,
   onOpen,
+  credits,
 }: {
   hotspots: Hotspot[];
   visited: string[];
   activeHotspotId: string | null;
   onOpen: (id: string) => void;
+  /** The scene's credits from the CMS, shown under the list when there are any. */
+  credits?: string;
 }) {
   const { t } = useTranslation();
+  const details = useRef<HTMLDetailsElement>(null);
   const counter = {
     visited: hotspots.filter((h) => visited.includes(h.id)).length,
     total: hotspots.length,
   };
   return (
-    <details className="group relative text-sm">
+    <details ref={details} className="group relative text-sm">
       <summary
         aria-label={`${t('scene.hotspots')}: ${t('scene.counterLabel', counter)}`}
-        className="cursor-pointer list-none rounded-full border border-foam/20 bg-abyss/50 px-3.5 py-1.5 text-foam/80 tabular-nums backdrop-blur-sm [&::-webkit-details-marker]:hidden"
+        className="flex h-9 cursor-pointer list-none items-center rounded-full panel px-3.5 label text-mist transition-colors group-open:text-foam hover:text-foam [&::-webkit-details-marker]:hidden"
       >
         {t('scene.counter', counter)}
       </summary>
-      <div className="absolute top-full right-0 z-10 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-foam/10 bg-[#14303d]/95 p-2 backdrop-blur-md">
-        <p className="px-2 py-1 font-display font-semibold">
+      <div className="absolute top-full right-0 z-10 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-card panel p-1.5">
+        <p className="px-2.5 pt-1.5 pb-2 label text-signal">
           {t('scene.hotspots')}
         </p>
         <ol className="max-h-[50dvh] space-y-0.5 overflow-y-auto">
@@ -41,23 +46,35 @@ export function HotspotList({
                 aria-current={
                   hotspot.id === activeHotspotId ? 'true' : undefined
                 }
-                onClick={() => onOpen(hotspot.id)}
-                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-foam/10"
+                onClick={() => {
+                  // Close the list so it doesn't cover what was just picked.
+                  if (details.current) details.current.open = false;
+                  onOpen(hotspot.id);
+                }}
+                className="flex min-h-10 w-full items-center gap-3 rounded-xl px-2.5 py-1.5 text-left transition-colors hover:bg-white/8 aria-[current=true]:bg-white/12"
               >
-                <span className="font-display font-semibold text-signal">
-                  {index + 1}
+                <span className="label text-signal">
+                  {String(index + 1).padStart(2, '0')}
                 </span>
-                <span className="flex-1">{hotspot.title}</span>
+                <span className="flex-1 leading-snug">{hotspot.title}</span>
                 {visited.includes(hotspot.id) && (
-                  <span className="shrink-0 text-xs text-signal">
-                    <span aria-hidden>✓ </span>
-                    {t('scene.visited')}
+                  <span className="flex shrink-0 items-center">
+                    <span
+                      aria-hidden
+                      className="size-1.5 rounded-full bg-signal"
+                    />
+                    <span className="sr-only">{t('scene.visited')}</span>
                   </span>
                 )}
               </button>
             </li>
           ))}
         </ol>
+        {credits && (
+          <p className="mx-2.5 mt-1.5 border-t border-line pt-2 pb-1.5 text-xs leading-snug text-dim">
+            {credits}
+          </p>
+        )}
       </div>
     </details>
   );

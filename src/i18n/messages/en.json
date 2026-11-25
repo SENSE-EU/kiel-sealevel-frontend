@@ -1,6 +1,10 @@
 {
   "appName": "SEALEVEL",
-  "language": { "label": "Language", "de": "Deutsch", "en": "English" },
+  "language": {
+    "label": "Language",
+    "de": "Deutsch",
+    "en": "English"
+  },
   "landing": {
     "kicker": "Kiel · 3D",
     "heading": "Dive into Kiel's waters",
@@ -25,19 +29,25 @@
   "scene": {
     "canvasLabel": "3D underwater scene. Drag or use the arrow keys to look around.",
     "back": "All scenes",
-    "viewpoints": "Viewpoints",
-    "previousViewpoint": "Previous viewpoint",
-    "nextViewpoint": "Next viewpoint",
     "hotspots": "Points of interest",
     "openHotspot": "Open: {{title}}",
     "visited": "visited",
     "counter": "{{visited}} of {{total}}",
     "counterLabel": "{{visited}} of {{total}} points of interest visited",
     "closePanel": "Close",
-    "hotspotNumber": "Hotspot {{number}}",
+    "expandPanel": "Expand",
+    "collapsePanel": "Shrink",
+    "hotspotNumber": "Point {{number}} / {{total}}",
     "mediaImage": "Image",
     "mediaVideo": "Video",
     "playVideo": "Play video",
-    "pauseVideo": "Pause video"
+    "pauseVideo": "Pause video",
+    "overview": "Overview",
+    "pointsCount": "{{count}} points of interest",
+    "read": "Read",
+    "previousPoint": "Previous point of interest",
+    "nextPoint": "Next point of interest",
+    "arrowsHint": "Swipe or use the arrows to explore them",
+    "pickHint": "Use the arrows or tap a number"
   }
 }

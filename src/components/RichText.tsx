@@ -15,7 +15,7 @@ function renderInline(nodes: InlineNode[]): ReactNode {
         <a
           key={index}
           href={node.url}
-          className="underline"
+          className="text-foam underline decoration-signal/50 underline-offset-[3px] transition-colors hover:text-signal hover:decoration-signal"
           rel="noreferrer"
           target="_blank"
         >
@@ -42,19 +42,22 @@ function renderBlock(block: BlockNode, index: number): ReactNode {
     case 'heading':
       // The panel title is the h2, so body headings start one level below it.
       return (
-        <h3 key={index} className="font-semibold">
+        <h3 key={index} className="pt-1 display text-lg font-normal text-foam">
           {renderInline(block.children)}
         </h3>
       );
     case 'quote':
       return (
-        <blockquote key={index} className="border-l-2 border-kelp pl-3 italic">
+        <blockquote
+          key={index}
+          className="border-l-2 border-signal/50 pl-3.5 display text-[1.0625rem] text-foam/90 italic"
+        >
           {renderInline(block.children)}
         </blockquote>
       );
     case 'code':
       return (
-        <pre key={index} className="overflow-x-auto text-sm">
+        <pre key={index} className="overflow-x-auto font-mono text-[0.8125rem]">
           {renderInline(block.children)}
         </pre>
       );
@@ -91,7 +94,7 @@ export function RichText({ value }: { value: RichTextValue }) {
           .map((text, index) => <p key={index}>{text}</p>)
       : value.map(renderBlock);
   return (
-    <div className="space-y-3 text-[15.5px] leading-6 text-foam/72">
+    <div className="space-y-3.5 text-[0.9375rem] leading-[1.6] text-pretty text-foam/85 [&_strong]:font-medium [&_strong]:text-foam">
       {blocks}
     </div>
   );
