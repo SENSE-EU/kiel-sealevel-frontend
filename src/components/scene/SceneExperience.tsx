@@ -79,34 +79,41 @@ export function SceneExperience({
 
   useEffect(() => engine?.setInsets(insets), [engine, insets]);
 
-  const openHotspot = useCallback(
-    (id: string) => {
-      setActiveHotspotId(id);
-      markVisited(id);
-    },
-    [markVisited],
-  );
-  // Points the camera at a hotspot without opening it, coming from the start viewpoint when the hotspot can
-  // be seen from there, or else from the viewpoint nearest to it (the 3D artist's sites are further apart
-  // than the fog reaches). Pointing at nothing goes back to the start viewpoint.
+  // The viewpoint a hotspot is seen from: the start viewpoint when the hotspot can be seen from there, or
+  // else the one nearest to it (the 3D artist's sites are further apart than the fog reaches). Null means
+  // the start viewpoint.
   const startAnchor = (
     viewpoints.find((v) => v.id === scene.startViewpointId) ?? viewpoints[0]
   )?.anchor;
-  const focusHotspot = useCallback(
+  const viewpointFor = useCallback(
     (id: string | null) => {
-      setFocusedHotspotId(id);
-      setSelectedViewpointId(null);
       const hotspot = hotspots.find((h) => h.id === id);
-      if (!hotspot || !engine || !startAnchor) return;
-      if (engine.visibleFrom(startAnchor, hotspot.anchor)) return;
+      if (!hotspot || !engine || !startAnchor) return null;
+      if (engine.visibleFrom(startAnchor, hotspot.anchor)) return null;
       const nearest = engine.nearestViewpoint(
         hotspot.anchor,
         viewpoints.map((v) => v.anchor),
       );
-      const viewpoint = viewpoints.find((v) => v.anchor === nearest);
-      if (viewpoint) setSelectedViewpointId(viewpoint.id);
+      return viewpoints.find((v) => v.anchor === nearest)?.id ?? null;
     },
     [engine, hotspots, viewpoints, startAnchor],
+  );
+  // Opening a hotspot also moves to its viewpoint, so closing it stays at that site.
+  const openHotspot = useCallback(
+    (id: string) => {
+      setActiveHotspotId(id);
+      setSelectedViewpointId(viewpointFor(id));
+      markVisited(id);
+    },
+    [markVisited, viewpointFor],
+  );
+  // Points the camera at a hotspot without opening it. Pointing at nothing goes back to the start viewpoint.
+  const focusHotspot = useCallback(
+    (id: string | null) => {
+      setFocusedHotspotId(id);
+      setSelectedViewpointId(viewpointFor(id));
+    },
+    [viewpointFor],
   );
   const closeHotspot = useCallback(() => setActiveHotspotId(null), []);
 

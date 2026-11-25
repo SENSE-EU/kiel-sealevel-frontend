@@ -166,6 +166,7 @@ export function SceneHeader({
           visited={visited}
           activeHotspotId={activeHotspotId}
           onOpen={onOpenHotspot}
+          credits={scene.credits.trim()}
         />
       </div>
     </header>
