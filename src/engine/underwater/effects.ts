@@ -34,6 +34,9 @@ import { waterize, type WaterMaterialData, type WaterUniforms } from './water';
  */
 
 type Locale = 'en' | 'de';
+/** Pixels at the top of the screen a pinned label stays out of. */
+const HEADER_CLEARANCE = 120;
+
 export type LabelText = Record<Locale, [title: string, note: string]>;
 
 /** The element labels are drawn in (over the canvas), and the page language. */
@@ -143,7 +146,10 @@ function createLabel(
       if (edge) {
         const margin = Math.min(0.8, (110 / width) * 2);
         projected.x = MathUtils.clamp(projected.x, -1 + margin, 1 - margin);
-        projected.y = MathUtils.clamp(projected.y, -0.8, 0.85);
+        // Clear of the header (title, language switch, visited count). The label hangs above its point.
+        const clearance = HEADER_CLEARANCE + element.offsetHeight;
+        const top = Math.min(0.85, 1 - (2 * clearance) / height);
+        projected.y = MathUtils.clamp(projected.y, -0.8, top);
       }
       element.style.translate = `${((projected.x + 1) / 2) * width}px ${((1 - projected.y) / 2) * height}px`;
       element.style.opacity = opacity.toFixed(2);
