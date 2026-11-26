@@ -7,7 +7,7 @@ import {
 import {
   ContentUnavailableError,
   type ContentSource,
-  type Scene,
+  type SceneData,
   type SceneSummary,
 } from '@/content/types';
 import { fallbackLocale, type Locale } from '@/i18n/locales';
@@ -108,7 +108,7 @@ export const strapiSource: ContentSource = {
   async getScene(slug, locale, signal) {
     // The API rejects malformed slugs with a 400; they can't match a scene, so skip the request.
     if (!SceneParamsSchema.safeParse({ slug }).success) return null;
-    return fetchBothLocales<Scene | null>(
+    return fetchBothLocales<SceneData | null>(
       locale,
       async (l) =>
         (

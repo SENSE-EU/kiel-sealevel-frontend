@@ -11,6 +11,7 @@ import { RichText } from '@/components/RichText';
 import type { Hotspot } from '@/content/types';
 import { Close, Collapse, Expand, Pause, Play } from './icons';
 import { glide } from './layout/shared';
+import { MediaGallery } from './MediaGallery';
 
 function formatDuration(seconds: number) {
   const whole = Math.round(seconds);
@@ -36,7 +37,7 @@ function useCardKeys(onClose: () => void) {
   }, [onClose]);
 }
 
-/** What a card shows: media if there is any, the number, title, text and the video button. */
+/** What a card shows: its gallery if it has one, the number, title, text and the video button. */
 function CardContent({
   hotspot,
   number,
@@ -58,21 +59,43 @@ function CardContent({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [playing, setPlaying] = useState(false);
-  const [duration, setDuration] = useState<number | null>(null);
+  const media = hotspot.media;
+  const [current, setCurrent] = useState(0);
+  const videos = useRef(new Map<number, HTMLVideoElement>());
+  const [playingIndex, setPlayingIndex] = useState<number | null>(null);
+  const [durations, setDurations] = useState<Record<number, number>>({});
+
+  const pauseAll = () => videos.current.forEach((video) => video.pause());
   useEffect(() => {
-    if (!playable) videoRef.current?.pause();
+    if (!playable) pauseAll();
   }, [playable]);
 
-  const togglePlay = () => {
-    const video = videoRef.current;
+  // Only the item on screen plays: moving on pauses the rest.
+  const show = (index: number) => {
+    if (index === current) return;
+    pauseAll();
+    setCurrent(index);
+  };
+  const toggleVideo = (index: number) => {
+    const video = videos.current.get(index);
     if (!video) return;
-    if (video.paused) void video.play();
-    else video.pause();
+    if (video.paused) {
+      videos.current.forEach((other) => other !== video && other.pause());
+      void video.play();
+    } else video.pause();
   };
 
-  const hasMedia = Boolean(hotspot.image || hotspot.video);
+  // The button under the text plays the video on screen, or brings the first one in and plays it.
+  const firstVideo = media.findIndex((item) => item.kind === 'video');
+  const buttonVideo = media[current]?.kind === 'video' ? current : firstVideo;
+  const buttonPlaying = playingIndex !== null && playingIndex === buttonVideo;
+  const buttonDuration = durations[buttonVideo];
+  const onPlayButton = () => {
+    if (buttonVideo !== current) show(buttonVideo);
+    toggleVideo(buttonVideo);
+  };
+
+  const hasMedia = media.length > 0;
   const titleId = `hotspot-title-${hotspot.id}`;
   const closeButton = (
     <button
@@ -88,42 +111,35 @@ function CardContent({
   return (
     <>
       {hasMedia && (
-        <div
-          className="relative h-40 shrink-0 overflow-hidden"
-          style={{ background: `linear-gradient(${tint}, #0a0c0d)` }}
+        <MediaGallery
+          media={media}
+          tint={tint}
+          current={current}
+          onCurrentChange={show}
+          playingIndex={playingIndex}
+          registerVideo={(index, element) => {
+            if (element) videos.current.set(index, element);
+            else videos.current.delete(index);
+          }}
+          onVideoEvent={(index, event) => {
+            if (event === 'play') setPlayingIndex(index);
+            else if (event === 'pause')
+              setPlayingIndex((playing) =>
+                playing === index ? null : playing,
+              );
+            else {
+              const duration = videos.current.get(index)?.duration;
+              if (duration !== undefined && Number.isFinite(duration))
+                setDurations((known) => ({ ...known, [index]: duration }));
+            }
+          }}
+          onToggleVideo={toggleVideo}
         >
-          {hotspot.video ? (
-            <video
-              ref={videoRef}
-              playsInline
-              preload="metadata"
-              src={hotspot.video.url}
-              {...(hotspot.image && { poster: hotspot.image.url })}
-              onPlay={() => setPlaying(true)}
-              onPause={() => setPlaying(false)}
-              onEnded={() => setPlaying(false)}
-              onLoadedMetadata={(event) =>
-                setDuration(event.currentTarget.duration)
-              }
-              className="size-full object-cover"
-            />
-          ) : (
-            hotspot.image && (
-              <img
-                src={hotspot.image.url}
-                alt={hotspot.image.alt}
-                className="size-full object-cover"
-              />
-            )
-          )}
-          <span className="absolute bottom-3 left-3.5 rounded-full border border-line bg-abyss/40 px-2.5 py-0.5 label text-foam backdrop-blur-md">
-            {hotspot.video ? t('scene.mediaVideo') : t('scene.mediaImage')}
-          </span>
           {expandButton && (
             <span className="absolute top-3 left-3">{expandButton}</span>
           )}
           <span className="absolute top-3 right-3">{closeButton}</span>
-        </div>
+        </MediaGallery>
       )}
 
       <div className={`px-5 pb-6 ${hasMedia ? 'pt-5' : 'pt-3'}`}>
@@ -147,19 +163,19 @@ function CardContent({
           {hotspot.title}
         </h2>
         <RichText value={hotspot.body} />
-        {hotspot.video && (
+        {firstVideo !== -1 && (
           <button
             type="button"
-            onClick={togglePlay}
+            onClick={onPlayButton}
             className="mt-5 flex w-full items-center gap-3 rounded-full border border-line bg-white/8 p-1.5 pr-4 text-left text-sm transition-colors hover:border-signal/50"
           >
             <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-signal text-abyss">
-              {playing ? <Pause /> : <Play />}
+              {buttonPlaying ? <Pause /> : <Play />}
             </span>
             <span>
-              {`${playing ? t('scene.pauseVideo') : t('scene.playVideo')}${
-                duration !== null && Number.isFinite(duration)
-                  ? ` · ${formatDuration(duration)}`
+              {`${buttonPlaying ? t('scene.pauseVideo') : t('scene.playVideo')}${
+                buttonDuration !== undefined
+                  ? ` · ${formatDuration(buttonDuration)}`
                   : ''
               }`}
             </span>

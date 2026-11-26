@@ -62,8 +62,8 @@ Going over logs a console warning but still loads. Bought assets never go in thi
 
 The app uses the CMS's read-only public API (see `docs/public-api.md` in kiel-sealevel-cms), on its own origin:
 
-| Request                                  | Used for                       |
-| ---------------------------------------- | ------------------------------ |
+| Request                                      | Used for                       |
+| -------------------------------------------- | ------------------------------ |
 | `GET /cms/api/public/scenes?locale=de`       | Scene list (`SceneSummaryDto`) |
 | `GET /cms/api/public/scenes/:slug?locale=en` | One scene (`SceneDetailDto`)   |
 
@@ -79,6 +79,11 @@ result, so the frontend still builds without the CMS repo.
 Notes:
 
 - **Image alt text** comes from the media file's `alternativeText` in the Media Library.
+- **Card media:** a hotspot's card shows a gallery (swipe on touch, arrows with a mouse). The CMS holds one `image`
+  and one `video` per hotspot for now; the video comes first, then the image. Until it has a gallery field and the
+  real pictures, `src/content/media.ts` adds placeholder stills rendered from the S1 scene
+  (`public/placeholders/gallery-*.webp`) to every card. Turn `PLACEHOLDER_GALLERY` off there when the real media
+  arrives.
 - **`body`** is a Blocks field. A plain text string also renders, but Markdown would show as raw text.
 - **`model`** empty means the built-in fallback scene is used.
 - **`credits`** shows at the bottom of the scene's points-of-interest menu (top right), when it isn't empty.
