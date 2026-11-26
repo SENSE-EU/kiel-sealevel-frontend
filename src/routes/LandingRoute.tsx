@@ -1,4 +1,3 @@
-import { lazy, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ContentUnavailable } from '@/components/ContentUnavailable';
 import { LanguageSwitch } from '@/components/LanguageSwitch';
@@ -8,32 +7,36 @@ import { useScenes } from '@/content/hooks';
 import { themeForSlug } from '@/engine/themes';
 import { useLocale } from './LocaleLayout';
 
-// Three.js arrives after the page is already readable and usable, so it can't hold up the first view.
-const LandingBackdrop = lazy(() =>
-  import('@/components/landing/LandingBackdrop').then((m) => ({
-    default: m.LandingBackdrop,
-  })),
-);
-
 export function LandingRoute() {
   const { t } = useTranslation();
   const locale = useLocale();
   const scenes = useScenes(locale);
-  const [previewSlug, setPreviewSlug] = useState<string | null>(null);
-
-  const firstSlug =
-    scenes.status === 'ready' ? scenes.data[0]?.slug : undefined;
-  const backdropSlug = previewSlug ?? firstSlug ?? 'munitions';
 
   return (
     <div className="relative min-h-full overflow-x-hidden">
+      {/* A still from the S1 scene; no 3D is downloaded before a visitor has picked a scene. Tall narrow
+          screens get a portrait crop. The theme colour shows until it loads. */}
       <div
+        aria-hidden
         className="fixed inset-0"
-        style={{ background: themeForSlug(backdropSlug).backdrop }}
+        style={{ background: themeForSlug('munitions').backdrop }}
       >
-        <Suspense fallback={null}>
-          <LandingBackdrop slug={backdropSlug} />
-        </Suspense>
+        <picture>
+          <source
+            media="(max-aspect-ratio: 4/5)"
+            srcSet="/hero/seabed-portrait.jpg"
+          />
+          <img
+            src="/hero/seabed-1600.jpg"
+            srcSet="/hero/seabed-1600.jpg 1600w, /hero/seabed-2560.jpg 2560w"
+            sizes="100vw"
+            alt=""
+            fetchPriority="high"
+            className="size-full object-cover"
+          />
+        </picture>
+        {/* Darker at the top and bottom, where the text and the cards sit. */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgb(3_21_32/0.55),rgb(3_21_32/0.05)_40%,rgb(3_21_32/0.1)_60%,rgb(3_21_32/0.6))]" />
       </div>
 
       <div className="relative flex min-h-dvh flex-col gap-8 p-5 md:p-6">
@@ -81,7 +84,6 @@ export function LandingRoute() {
                         scene={scene}
                         locale={locale}
                         number={index + 1}
-                        onPreview={() => setPreviewSlug(scene.slug)}
                       />
                     ))}
                   </div>

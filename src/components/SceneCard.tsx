@@ -7,12 +7,10 @@ export function SceneCard({
   scene,
   locale,
   number,
-  onPreview,
 }: {
   scene: SceneSummary;
   locale: Locale;
   number: number;
-  onPreview: () => void;
 }) {
   const sheen =
     'linear-gradient(160deg, rgb(255 255 255 / 0.12), rgb(255 255 255 / 0.03) 50%)';
@@ -23,8 +21,6 @@ export function SceneCard({
   return (
     <Link
       to={`/${locale}/scenes/${scene.slug}`}
-      onPointerEnter={onPreview}
-      onFocus={onPreview}
       style={{ backgroundImage: `${sheen}${image}` }}
       className="group flex min-h-36 flex-col rounded-card panel bg-cover bg-center p-4 transition-[border-color,translate] duration-500 ease-out hover:-translate-y-1 hover:border-signal/50 motion-reduce:hover:translate-y-0 md:min-h-44 md:p-5"
     >
