@@ -101,7 +101,7 @@ export function createUniforms(root: string) {
     uSat: { value: 1.0 },
     uSurfSat: { value: 1.0 },
     uContrast: { value: 1.3 },
-    uCausticBlur: { value: 3.0 },
+    uCausticBlur: { value: 3.4 },
     uFloc: { value: LOOK.floc },
     uFocus: {
       value: [new Vector4(), new Vector4(), new Vector4(), new Vector4()],
@@ -381,18 +381,25 @@ const SAND_NORMAL_GLSL = /* glsl */ `#include <normal_fragment_maps>
 
 // Open-casing interiors: the near-black baked texels inside the tube are lifted to dark silted rust.
 const ALBEDO_FLOOR_GLSL = /* glsl */ `#include <map_fragment>
-  float darkTexel = uAlbFloor * (1.0 - smoothstep(0.02, 0.09, dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11))));
+  vec3 luminanceWeights = vec3(0.3, 0.59, 0.11);
+  float lumT = dot(diffuseColor.rgb, luminanceWeights);
+  float darkTexel = uAlbFloor * (1.0 - smoothstep(0.012, 0.045, lumT));
   if (uAlbFloor > 0.0) {
     vec3 ap = vWPos - uPlume.xyz;
     float ra = length(cross(ap, uPlumeAxis));
     darkTexel = max(darkTexel, uAlbFloor * (1.0 - smoothstep(0.066, 0.078, ra)) * (1.0 - smoothstep(-0.01, 0.02, dot(ap, uPlumeAxis))));
   }
-  diffuseColor.rgb = mix(diffuseColor.rgb, max(diffuseColor.rgb, vec3(0.065, 0.040, 0.024)), darkTexel);`;
+  vec3 liftC = diffuseColor.rgb * max(1.0, 0.046 / max(lumT, 1e-4));
+  liftC = mix(vec3(0.065, 0.040, 0.024), liftC, smoothstep(0.004, 0.02, lumT));
+  diffuseColor.rgb = mix(diffuseColor.rgb, liftC, darkTexel);`;
 
 // The plume tint (an amber "data layer" on the floor; mussels in it glow at the rim and pulse) and the
 // multibeam swath (a cyan scan line sweeping the bottom, leaving a fading depth-coloured map), then water.
 const OUTGOING_GLSL = /* glsl */ `
-  outgoingLight = mix(outgoingLight, max(outgoingLight, diffuseColor.rgb * 0.7), darkTexel);
+  vec3 fillC = diffuseColor.rgb * 0.7;
+  float incidentLum = dot(outgoingLight, luminanceWeights);
+  float fillLum = dot(fillC, luminanceWeights);
+  outgoingLight = mix(outgoingLight, mix(fillC, outgoingLight, clamp(incidentLum / max(fillLum, 1e-5), 0.0, 1.0)), darkTexel);
   float pK = plumeConc(vWPos) * uPlumeK;
   if (uPlumeK > 1.0 && uPlume.w > 0.0) {
     vec3 dm = vWPos - uPlume.xyz;
@@ -664,6 +671,16 @@ export function createWater(
 
   const sun = new DirectionalLight(LOOK.sunColor, LOOK.sunIntensity);
   sun.castShadow = !mobile;
+  // The shadow pass uses undeformed geometry. Animated fish and the survey vehicle don't cast.
+  sun.shadow.autoUpdate = false;
+  const invalidateShadows = () => {
+    sun.shadow.needsUpdate = true;
+  };
+  renderer.domElement.addEventListener(
+    'webglcontextrestored',
+    invalidateShadows,
+  );
+  own(sun.shadow);
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.intensity = LOOK.shadowIntensity;
   Object.assign(sun.shadow.camera, {
@@ -785,6 +802,7 @@ export function createWater(
   const causticOrigin = uniforms.uCausticCenter.value.clone();
 
   return {
+    invalidateShadows,
     /** Moves the light, shafts, snow and caustic texture to a chapter's centre. */
     setStage(centre: Vector3) {
       shafts.position.set(centre.x, 0, centre.z);
@@ -792,6 +810,7 @@ export function createWater(
       sun.position.copy(LOOK.sunDir).multiplyScalar(10).add(centre);
       sun.target.position.copy(centre);
       sun.target.updateMatrixWorld();
+      invalidateShadows();
       uniforms.uCausticCenter.value.set(
         causticOrigin.x + centre.x,
         causticOrigin.y + centre.z,
@@ -810,6 +829,10 @@ export function createWater(
       renderer.setRenderTarget(previous);
     },
     dispose() {
+      renderer.domElement.removeEventListener(
+        'webglcontextrestored',
+        invalidateShadows,
+      );
       scene.remove(group);
       scene.environment = null;
       for (const item of disposables) item.dispose();

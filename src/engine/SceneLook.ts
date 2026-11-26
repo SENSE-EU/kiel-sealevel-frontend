@@ -21,6 +21,12 @@ export interface SceneLook {
   maxPixelRatio?: number;
   /** Most device pixels to draw per frame; big screens drop toward 1 device pixel per CSS pixel. */
   pixelBudget?: number;
+  /** Idle canvas refresh rate. Camera movement and scripted shots use the display rate. */
+  idleFps?: number;
   /** The hotspot the camera is at (its model node name), or null. For effects tied to a hotspot. */
   focus?(anchor: string | null): void;
+  /** A scripted camera shot played when a visitor opens its hotspot. */
+  startCameraShot?(anchor: string): boolean;
+  updateCameraShot?(seconds: number, deltaSeconds: number): boolean;
+  cancelCameraShot?(): void;
 }

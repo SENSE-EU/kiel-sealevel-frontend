@@ -16,6 +16,7 @@ import {
   type WebGLProgramParametersWithUniforms,
   type WebGLRenderer,
 } from 'three';
+import { disposeObject } from '../disposeObject';
 import { createLoader } from '../loadModel';
 import type { SceneLook } from '../SceneLook';
 import {
@@ -26,6 +27,7 @@ import {
   type PlumeConfig,
   type SurveyConfig,
 } from './effects';
+import { batchPileShells } from './pileShells';
 import { createVegetation, type VegetationData } from './vegetation';
 import {
   createUniforms,
@@ -113,9 +115,13 @@ export async function loadScenePackage(
 ): Promise<LoadedPackage> {
   const phone = isPhoneTier();
   const uniforms = createUniforms(pkg.root);
-  const { loader, dispose: disposeLoader } = createLoader(renderer);
+  const {
+    loadAsync,
+    parseAsync,
+    dispose: disposeLoader,
+  } = createLoader(renderer);
   const load = (file: string, progress?: (fraction: number) => void) =>
-    loader.loadAsync(pkg.root + file, (event) => {
+    loadAsync(pkg.root + file, (event) => {
       if (progress && event.lengthComputable)
         progress(event.loaded / event.total);
     });
@@ -137,6 +143,7 @@ export async function loadScenePackage(
     ...chapter,
     centre: new Vector3(...chapter.centre),
     objects: [] as Object3D[],
+    visible: true,
   }));
   const chapterOf = (point: Vector3) => {
     let best = chapters[0]!;
@@ -154,9 +161,11 @@ export async function loadScenePackage(
   const box = new Box3();
   const centre = new Vector3();
   const assignChapter = (object: Object3D, at?: Vector3) => {
-    chapterOf(at ?? box.setFromObject(object).getCenter(centre)).objects.push(
-      object,
+    const chapter = chapterOf(
+      at ?? box.setFromObject(object).getCenter(centre),
     );
+    object.visible = chapter.visible;
+    chapter.objects.push(object);
   };
 
   // The chapter-2 sea floor shares chapter 1's materials: patch each material once.
@@ -303,9 +312,15 @@ export async function loadScenePackage(
 
   const findObject = (name: string) => root.getObjectByName(name) ?? null;
 
-  const base = await load(pkg.base, onProgress);
+  const base = await load(pkg.base, onProgress).catch((error: unknown) => {
+    disposeLoader();
+    throw error;
+  });
   root.add(base.scene);
   prepare(base.scene);
+  // The turf sampler needs the original per-shell footprints queued by prepare().
+  for (const chapter of chapters)
+    chapter.objects = batchPileShells(base.scene, chapter.objects);
 
   const [, vegetation] = await Promise.all([
     Promise.all(
@@ -339,6 +354,7 @@ export async function loadScenePackage(
   if (plants) root.add(plants.group);
 
   const water = createWater(renderer, scene, camera, uniforms, phone);
+  let disposed = false;
 
   const effects: EffectContext = {
     root,
@@ -366,29 +382,37 @@ export async function loadScenePackage(
     }
   });
 
-  // Textures upload one per frame, within about 3 ms, so nothing stutters while the camera moves.
-  const uploadQueue: { texture: Texture; done: () => void }[] = [];
+  // Submit at most one detail texture upload per rendered frame. A single upload can exceed a time budget.
+  const uploadQueue: { texture: Texture; file: string; done: () => void }[] =
+    [];
   const uploaded = new WeakSet<Texture>();
-  const queueUploads = (textures: Texture[]) =>
+  const detailRequests = new AbortController();
+  const profile =
+    new URLSearchParams(window.location.search).get('perf') === '1';
+  const measure = (file: string, phase: string, start: number) => {
+    if (profile) performance.measure(`S1 ${file} ${phase}`, { start });
+  };
+  const queueUploads = (textures: Set<Texture>, file: string) =>
     Promise.all(
-      textures
+      [...textures]
         .filter((texture) => !uploaded.has(texture))
         .map(
           (texture) =>
-            new Promise<void>((done) => uploadQueue.push({ texture, done })),
+            new Promise<void>((done) =>
+              uploadQueue.push({ texture, file, done }),
+            ),
         ),
     );
   const pumpUploads = () => {
-    const start = performance.now();
-    do {
-      const item = uploadQueue.shift();
-      if (!item) break;
-      if (!uploaded.has(item.texture)) {
-        renderer.initTexture(item.texture);
-        uploaded.add(item.texture);
-      }
-      item.done();
-    } while (performance.now() - start < 3);
+    const item = uploadQueue.shift();
+    if (!item) return;
+    if (!uploaded.has(item.texture)) {
+      const start = performance.now();
+      renderer.initTexture(item.texture);
+      measure(item.file, 'texture submit (CPU)', start);
+      uploaded.add(item.texture);
+    }
+    item.done();
   };
 
   let stage: (typeof chapters)[number] | null = null;
@@ -406,7 +430,10 @@ export async function loadScenePackage(
       const dx = near.x - chapter.centre.x;
       const dz = near.z - chapter.centre.z;
       const visible = Math.hypot(dx, dz) < CHAPTER_DRAW_DISTANCE;
+      if (chapter.visible === visible) continue;
+      chapter.visible = visible;
       for (const object of chapter.objects) object.visible = visible;
+      water.invalidateShadows();
     }
   };
 
@@ -423,8 +450,23 @@ export async function loadScenePackage(
   function loadDetail(pack: ScenePackage['detail'][number]) {
     if (detailState.has(pack.file)) return;
     detailState.set(pack.file, 'loading');
-    load(pack.file).then(
-      async (gltf) => {
+    const url = new URL(pkg.root + pack.file, document.baseURI);
+    const fetchStart = performance.now();
+    fetch(url, { signal: detailRequests.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const buffer = await response.arrayBuffer();
+        measure(pack.file, 'fetch', fetchStart);
+        const parseStart = performance.now();
+        const gltf = await parseAsync(buffer, new URL('.', url).href);
+        measure(pack.file, 'parse and decode', parseStart);
+        return gltf;
+      })
+      .then(async (gltf) => {
+        if (disposed) {
+          disposeObject(gltf.scene);
+          return;
+        }
         const fuzz: Mesh[] = [];
         const drop: Mesh[] = [];
         const swaps: [
@@ -453,16 +495,29 @@ export async function loadScenePackage(
               }
           drop.push(mesh);
         });
-        for (const mesh of drop) {
-          mesh.removeFromParent();
-          mesh.geometry.dispose();
-        }
+        for (const mesh of drop) mesh.removeFromParent();
         for (const proxy of fuzz) makeShellFuzz(proxy);
+        const uploadStart = performance.now();
+        const compileStart = uploadStart;
         await Promise.all([
-          queueUploads(swaps.map(([, sharp, key]) => sharp[key]!)),
-          queueUploads(texturesOf(gltf.scene)),
-          renderer.compileAsync(gltf.scene, camera, scene).catch(() => {}),
+          queueUploads(
+            new Set([
+              ...swaps.map(([, sharp, key]) => sharp[key]!),
+              ...texturesOf(gltf.scene),
+            ]),
+            pack.file,
+          ).then(() => measure(pack.file, 'upload queue', uploadStart)),
+          renderer
+            .compileAsync(gltf.scene, camera, scene)
+            .catch(() => {})
+            .then(() => measure(pack.file, 'shader warm-up', compileStart)),
         ]);
+        if (disposed) {
+          for (const mesh of drop) disposeObject(mesh);
+          disposeObject(gltf.scene);
+          return;
+        }
+        for (const mesh of drop) mesh.geometry.dispose();
         for (const [material, sharp, key] of swaps) {
           const old = material[key];
           if (old && old !== sharp[key]) old.dispose();
@@ -473,13 +528,14 @@ export async function loadScenePackage(
         gltf.scene.traverse((object) => {
           if ((object as Mesh).isMesh) assignChapter(object);
         });
+        water.invalidateShadows();
         detailState.set(pack.file, 'ready');
-      },
-      (error: unknown) => {
+      })
+      .catch((error: unknown) => {
+        if (disposed) return;
         console.error(`[scene] Close-up pack ${pack.file} failed`, error);
         detailState.delete(pack.file);
-      },
-    );
+      });
   }
   function loadDetailIfIn(
     pack: ScenePackage['detail'][number],
@@ -537,6 +593,7 @@ export async function loadScenePackage(
     },
     maxPixelRatio: phone ? 1.5 : 2,
     pixelBudget: phone ? 1_000_000 : 2_500_000,
+    idleFps: phone ? 30 : undefined,
     update(seconds, delta) {
       uniforms.uTime.value = seconds;
       showChapters(camera.position);
@@ -556,7 +613,22 @@ export async function loadScenePackage(
       plume?.focus(anchor);
       survey?.focus(anchor);
     },
+    startCameraShot(anchor) {
+      if (!survey?.startShot(anchor)) return false;
+      if (surveyChapter)
+        for (const pack of pkg.detail) loadDetailIfIn(pack, surveyChapter);
+      return true;
+    },
+    updateCameraShot(seconds, delta) {
+      return survey?.updateShot(seconds, delta) ?? false;
+    },
+    cancelCameraShot() {
+      survey?.cancelShot();
+    },
     dispose() {
+      disposed = true;
+      detailRequests.abort();
+      for (const item of uploadQueue.splice(0)) item.done();
       plume?.dispose();
       survey?.dispose();
       plants?.dispose();

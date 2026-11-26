@@ -15,6 +15,7 @@ import { checkBudget } from './budget';
 import { CameraRig, lookAtOrientation } from './CameraRig';
 import { disposeObject } from './disposeObject';
 import { createEnvironment, swayOffset } from './environment';
+import { FramePacer } from './FramePacer';
 import { loadModel } from './loadModel';
 import { createPlaceholderScene } from './placeholderScene';
 import type { SceneLook } from './SceneLook';
@@ -71,12 +72,15 @@ export class SceneEngine {
   private model: Object3D | null = null;
   private hasView = false;
   private focusing = false;
+  private framingShot = false;
   private readonly viewShift = { x: 0, y: 0 };
   private insets: Insets = { bottom: 0, left: 0, right: 0 };
   /** The page language, for text the scene draws itself (effect labels). */
   private locale = 'en';
   private disposed = false;
+  private readonly framePacer = new FramePacer();
   private lastFrame: number | null = null;
+  private lastRender: number | null = null;
 
   /** Throws if WebGL isn't available; the UI then falls back to the plain list. */
   constructor(
@@ -96,7 +100,10 @@ export class SceneEngine {
     this.reducedMotion = window.matchMedia(
       '(prefers-reduced-motion: reduce)',
     ).matches;
-    this.rig = new CameraRig(this.camera, container, this.reducedMotion);
+    this.rig = new CameraRig(this.camera, container, this.reducedMotion, () => {
+      this.look.cancelCameraShot?.();
+      this.framePacer.wake();
+    });
     this.highlight = new AnchorHighlight(this.reducedMotion);
     this.theme = themeForSlug(slug);
     this.look = proceduralLook(this.scene, this.theme);
@@ -118,12 +125,14 @@ export class SceneEngine {
     onProgress: (fraction: number) => void,
   ): Promise<Set<string>> {
     const local = await findLocalPackage(this.slug);
-    if (local && !this.disposed) {
+    if (this.disposed) return new Set();
+    if (local) {
       // The package brings its own water and light.
       this.look.dispose();
       try {
         // Only scenes with a package need the underwater code, so it loads on demand.
         const { loadScenePackage } = await import('./underwater/scenePackage');
+        if (this.disposed) return new Set();
         const loaded = await loadScenePackage(
           local,
           this.renderer,
@@ -134,6 +143,7 @@ export class SceneEngine {
         );
         if (this.disposed) {
           loaded.look.dispose();
+          disposeObject(loaded.root);
           return new Set();
         }
         this.look = loaded.look;
@@ -245,12 +255,25 @@ export class SceneEngine {
   ) {
     const viewpoint = this.anchor(viewpointAnchor);
     if (!viewpoint) return;
+    this.framePacer.wake();
     const { position, orientation } = this.viewpointPose(viewpoint);
 
     const hotspot = hotspotAnchor ? this.anchor(hotspotAnchor) : null;
+    this.look.cancelCameraShot?.();
     this.highlight.set(hotspot);
     this.look.focus?.(hotspot?.name ?? null);
     this.focusing = hotspot !== null && panelOpen;
+    this.framingShot = false;
+    if (
+      hotspot &&
+      panelOpen &&
+      !this.reducedMotion &&
+      this.look.startCameraShot?.(hotspot.name)
+    ) {
+      this.framingShot = true;
+      this.hasView = true;
+      return;
+    }
     const pose = hotspot
       ? this.focusPose(hotspot, position)
       : { position, orientation };
@@ -262,11 +285,13 @@ export class SceneEngine {
   /** Pixels of UI covering each edge of the scene, so it can centre in the space that's left. */
   setInsets(insets: Insets) {
     this.insets = insets;
+    this.framePacer.wake();
   }
 
   /** The page language, for text drawn over the scene. */
   setLocale(locale: string) {
     this.locale = locale;
+    this.framePacer.wake();
   }
 
   /** Whether a hotspot is on screen when the camera stands at a viewpoint. */
@@ -390,6 +415,7 @@ export class SceneEngine {
   }
 
   private resize() {
+    this.framePacer.wake();
     const { clientWidth: width, clientHeight: height } = this.container;
     if (width === 0 || height === 0) return;
     const ratio = this.pixelRatio(width, height);
@@ -417,20 +443,44 @@ export class SceneEngine {
   }
 
   private frame(time: number) {
-    const delta = MathUtils.clamp(
+    if (document.hidden) {
+      this.framePacer.wake();
+      this.lastFrame = this.lastRender = null;
+      return;
+    }
+    const frameDelta = Math.min(
       (time - (this.lastFrame ?? time)) / 1000,
-      0,
       MAX_FRAME_SECONDS,
     );
     this.lastFrame = time;
     const seconds = time / 1000;
 
-    this.rig.update(delta);
-    if (!this.reducedMotion)
+    const scripted = this.look.updateCameraShot?.(seconds, frameDelta);
+    if (
+      !this.framePacer.shouldRender(
+        time,
+        this.look.idleFps,
+        Boolean(scripted) || this.rig.isMoving,
+      )
+    )
+      return;
+    const delta = Math.min(
+      (time - (this.lastRender ?? time)) / 1000,
+      MAX_FRAME_SECONDS,
+    );
+    this.lastRender = time;
+    if (scripted)
+      this.rig.moveTo(
+        { position: this.camera.position, orientation: this.camera.quaternion },
+        true,
+      );
+    else this.rig.update(delta);
+    if (!scripted && !this.reducedMotion)
       this.camera.position.add(
         swayOffset(seconds, this.sway).multiplyScalar(this.look.swayScale ?? 1),
       );
     this.updateViewShift(delta);
+    this.camera.updateMatrixWorld();
     this.look.update(seconds, delta);
     this.highlight.update(seconds);
     this.renderer.render(this.scene, this.camera);
@@ -445,8 +495,11 @@ export class SceneEngine {
     const goalX =
       (this.focusing && wide ? SIDE_PANEL_SHIFT : 0) + (right - left) / 2;
     const lift = Math.max(0, (bottom - HEADER_RESERVE) / 2);
+    // The scripted shot already fits the portrait viewport. Account for the measured panel only.
     const goalY =
-      (this.focusing && !wide ? height * SHEET_SHIFT_FRACTION : 0) + lift;
+      (this.focusing && !this.framingShot && !wide
+        ? height * SHEET_SHIFT_FRACTION
+        : 0) + lift;
     const ease = this.reducedMotion
       ? 1
       : 1 - Math.exp(-SHIFT_SMOOTHING * delta);
@@ -464,8 +517,6 @@ export class SceneEngine {
 
   private updatePins() {
     const { clientWidth: width, clientHeight: height } = this.container;
-    this.camera.updateMatrixWorld();
-
     const range = this.look.pinRange ?? Infinity;
     for (const [element, center] of this.pins) {
       this.projected.copy(center).project(this.camera);

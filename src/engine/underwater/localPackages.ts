@@ -46,6 +46,7 @@ const LOCAL_PACKAGES: Record<string, ScenePackage> = {
     survey: {
       chapter: 'mine',
       hotspot: 'hs_survey',
+      subject: 'PROP_Mine_01',
       lanes: [-5.6, -3.1, -0.6, 1.9],
       from: -5.5,
       to: 5.5,
