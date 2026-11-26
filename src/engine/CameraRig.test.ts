@@ -52,4 +52,63 @@ describe('CameraRig', () => {
     settle();
     expect(degreesFromForward(camera)).toBeLessThan(0.01);
   });
+
+  describe('at a hotspot', () => {
+    function atHotspot() {
+      const env = setup();
+      const pivot = new Vector3(1, 2, 0);
+      // Three units in front of the pivot, looking at it.
+      env.rig.moveTo(
+        {
+          position: new Vector3(1, 2, 3),
+          orientation: new Quaternion(),
+          pivot,
+        },
+        true,
+      );
+      env.settle();
+      return { ...env, pivot };
+    }
+    const aimsAt = (camera: PerspectiveCamera, point: Vector3) => {
+      const forward = new Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+      const toPoint = point.clone().sub(camera.position).normalize();
+      return MathUtils.radToDeg(forward.angleTo(toPoint));
+    };
+
+    it('circles the hotspot instead of turning in place', () => {
+      const { camera, fire, settle, pivot } = atHotspot();
+      fire('pointerdown', { clientX: 0, clientY: 0, pointerId: 1 });
+      fire('pointermove', { clientX: 150, clientY: 0 });
+      settle();
+
+      // Dragging right moves the camera to the left of the hotspot, at the same distance, still aimed at it.
+      expect(camera.position.x).toBeLessThan(pivot.x - 0.5);
+      expect(camera.position.distanceTo(pivot)).toBeCloseTo(3, 5);
+      expect(aimsAt(camera, pivot)).toBeLessThan(0.01);
+    });
+
+    it('rises to look down on it when dragged down, within limits', () => {
+      const { camera, fire, settle, pivot } = atHotspot();
+      fire('pointerdown', { clientX: 0, clientY: 0, pointerId: 1 });
+      fire('pointermove', { clientX: 0, clientY: 100000 });
+      settle();
+
+      expect(camera.position.y).toBeGreaterThan(pivot.y);
+      const rise = MathUtils.radToDeg(
+        Math.asin((camera.position.y - pivot.y) / 3),
+      );
+      expect(rise).toBeCloseTo(30, 1);
+      expect(aimsAt(camera, pivot)).toBeLessThan(0.01);
+    });
+
+    it('goes back to its view on leaving the hotspot', () => {
+      const { camera, rig, fire, settle, pose } = atHotspot();
+      fire('keydown', { key: 'ArrowLeft' });
+      settle();
+      rig.moveTo(pose, false);
+      settle();
+      expect(camera.position.distanceTo(pose.position)).toBeLessThan(1e-3);
+      expect(degreesFromForward(camera)).toBeLessThan(0.01);
+    });
+  });
 });

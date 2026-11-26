@@ -8,6 +8,11 @@ import {
 } from 'three';
 
 const LOOK_AROUND_LIMIT = MathUtils.degToRad(24);
+// Around a hotspot: how far the camera can circle it sideways, and rise above or dip below its view.
+const ORBIT_YAW_LIMIT = MathUtils.degToRad(50);
+const ORBIT_RISE_LIMIT = MathUtils.degToRad(30);
+const ORBIT_DIP_LIMIT = MathUtils.degToRad(8);
+const UP = new Vector3(0, 1, 0);
 const DRAG_SENSITIVITY = 0.003;
 const KEY_STEP = MathUtils.degToRad(6);
 const MOVE_SMOOTHING = 2.2;
@@ -16,6 +21,8 @@ const LOOK_SMOOTHING = 10;
 export interface CameraPose {
   position: Vector3;
   orientation: Quaternion;
+  /** A point to circle when dragging, such as a hotspot. Without one, dragging looks around instead. */
+  pivot?: Vector3;
 }
 
 /** The orientation of a camera at `eye` looking at `target`. */
@@ -25,8 +32,9 @@ export function lookAtOrientation(eye: Vector3, target: Vector3): Quaternion {
 }
 
 /**
- * Eases the camera between fixed poses and adds a clamped look-around on top. There is no free
- * movement: position only ever comes from `moveTo`.
+ * Eases the camera between fixed poses and adds a clamped drag on top: at a viewpoint the camera looks
+ * around where it stands; at a hotspot it circles the hotspot, which stays where it is on screen. There is
+ * no free movement beyond that.
  */
 export class CameraRig {
   private readonly goal: CameraPose = {
@@ -38,6 +46,13 @@ export class CameraRig {
   private readonly look = new Euler(0, 0, 0, 'YXZ');
   private readonly lookGoal = { yaw: 0, pitch: 0 };
   private readonly lookOffset = new Quaternion();
+  private pivot: Vector3 | null = null;
+  private readonly orbit = { yaw: 0, pitch: 0 };
+  private readonly orbitGoal = { yaw: 0, pitch: 0 };
+  private readonly orbitRotation = new Quaternion();
+  private readonly turn = new Quaternion();
+  private readonly right = new Vector3();
+  private readonly offset = new Vector3();
   private readonly removeListeners: () => void;
 
   constructor(
@@ -53,10 +68,15 @@ export class CameraRig {
     this.goal.orientation.copy(pose.orientation);
     this.lookGoal.yaw = 0;
     this.lookGoal.pitch = 0;
+    this.orbitGoal.yaw = 0;
+    this.orbitGoal.pitch = 0;
+    this.pivot = pose.pivot?.clone() ?? null;
     if (instant || this.reducedMotion) {
       this.position.copy(pose.position);
       this.base.copy(pose.orientation);
       this.look.set(0, 0, 0);
+      this.orbit.yaw = 0;
+      this.orbit.pitch = 0;
     }
   }
 
@@ -71,13 +91,52 @@ export class CameraRig {
     this.look.x = MathUtils.lerp(this.look.x, this.lookGoal.pitch, look);
     this.lookOffset.setFromEuler(this.look);
     this.camera.quaternion.copy(this.base).multiply(this.lookOffset);
+
+    this.orbit.yaw = MathUtils.lerp(this.orbit.yaw, this.orbitGoal.yaw, look);
+    this.orbit.pitch = MathUtils.lerp(
+      this.orbit.pitch,
+      this.orbitGoal.pitch,
+      look,
+    );
+    if (this.pivot) {
+      // Turn the whole camera, position and aim together, about the pivot: sideways around the vertical,
+      // up and down around the camera's own right-hand axis.
+      this.right.set(1, 0, 0).applyQuaternion(this.base).setY(0);
+      if (this.right.lengthSq() < 1e-6) this.right.set(1, 0, 0);
+      this.right.normalize();
+      this.orbitRotation.setFromAxisAngle(UP, this.orbit.yaw);
+      this.turn.setFromAxisAngle(this.right, this.orbit.pitch);
+      this.orbitRotation.multiply(this.turn);
+      this.offset
+        .copy(this.camera.position)
+        .sub(this.pivot)
+        .applyQuaternion(this.orbitRotation);
+      this.camera.position.copy(this.pivot).add(this.offset);
+      this.camera.quaternion.premultiply(this.orbitRotation);
+    }
   }
 
   dispose() {
     this.removeListeners();
   }
 
+  /** Positive yaw and pitch move the scene right and down, following a finger. */
   private nudge(yaw: number, pitch: number) {
+    if (this.pivot) {
+      // Like turning the object by hand: drag right and the camera circles to the left of it; drag down
+      // and the camera rises to look down on it.
+      this.orbitGoal.yaw = MathUtils.clamp(
+        this.orbitGoal.yaw - yaw,
+        -ORBIT_YAW_LIMIT,
+        ORBIT_YAW_LIMIT,
+      );
+      this.orbitGoal.pitch = MathUtils.clamp(
+        this.orbitGoal.pitch - pitch,
+        -ORBIT_RISE_LIMIT,
+        ORBIT_DIP_LIMIT,
+      );
+      return;
+    }
     const clamp = (v: number) =>
       MathUtils.clamp(v, -LOOK_AROUND_LIMIT, LOOK_AROUND_LIMIT);
     this.lookGoal.yaw = clamp(this.lookGoal.yaw + yaw);

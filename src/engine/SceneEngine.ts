@@ -370,7 +370,11 @@ export class SceneEngine {
     const view = this.partner(anchor, 'view');
     if (view) {
       const position = view.getWorldPosition(new Vector3());
-      return { position, orientation: lookAtOrientation(position, center) };
+      return {
+        position,
+        orientation: lookAtOrientation(position, center),
+        pivot: center,
+      };
     }
     const offset = from.clone().sub(center);
     const distance = Math.min(
@@ -378,7 +382,11 @@ export class SceneEngine {
       Math.max(radius * FOCUS_RADIUS_FACTOR, offset.length() * FOCUS_APPROACH),
     );
     const position = center.clone().add(offset.setLength(distance));
-    return { position, orientation: lookAtOrientation(position, center) };
+    return {
+      position,
+      orientation: lookAtOrientation(position, center),
+      pivot: center,
+    };
   }
 
   private resize() {
