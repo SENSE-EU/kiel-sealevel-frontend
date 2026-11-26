@@ -57,6 +57,7 @@ src/
 
 ## Deployment
 
-`.github/workflows/ci.yml` checks every PR, and on `main` pushes an image to the container registry. It needs the
-repository secrets `ACR_USERNAME` and `ACR_PASSWORD`. The image serves only the static build; `/cms`, `/uploads`, HTTPS
-and caching belong to the reverse proxy in front of it. No secrets or bought 3D assets belong in this repo.
+`.github/workflows/ci.yml` checks every PR without publishing an image. A push to `main` publishes the `staging` image
+tag, while a semantic version tag such as `v0.0.1` publishes both `preprod` and `0.0.1`. Publishing needs the repository
+secrets `ACR_USERNAME` and `ACR_PASSWORD`. The image serves only the static build; `/cms`, `/uploads`, HTTPS and caching
+belong to the reverse proxy in front of it. No secrets or bought 3D assets belong in this repo.

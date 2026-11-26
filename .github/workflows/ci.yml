@@ -1,13 +1,22 @@
-name: CI
+name: Build and publish the "frontend" image
 
 on:
   pull_request:
   push:
     branches: [main]
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   REGISTRY: acrkielweupoc.azurecr.io
-  IMAGE: kiel-sealevel-frontend
+  IMAGE_NAME: kiel-sealevel-frontend
 
 jobs:
   check:
@@ -28,16 +37,59 @@ jobs:
     needs: check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine image tags
+        id: meta
+        shell: bash
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          IMAGE="${REGISTRY}/${IMAGE_NAME}"
+
+          if [[ "$REF_TYPE" == "branch" ]]; then
+            TAGS="$IMAGE:staging"
+
+          elif [[ "$REF_TYPE" == "tag" ]]; then
+            VERSION="${REF_NAME#v}"
+
+            if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "Invalid version: $REF_NAME"
+              exit 1
+            fi
+
+            TAGS="$IMAGE:preprod
+          $IMAGE:$VERSION"
+
+          else
+            echo "Unsupported ref type"
+            exit 1
+          fi
+
+          {
+            echo "tags<<EOF"
+            echo "$TAGS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to ACR
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
-      - uses: docker/build-push-action@v6
+
+      - name: Build and publish frontend
+        uses: docker/build-push-action@v6
         with:
           context: .
+          file: ./Dockerfile
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ github.sha }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE }}:staging
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
