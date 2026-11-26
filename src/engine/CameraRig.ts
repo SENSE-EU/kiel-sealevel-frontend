@@ -54,11 +54,13 @@ export class CameraRig {
   private readonly right = new Vector3();
   private readonly offset = new Vector3();
   private readonly removeListeners: () => void;
+  private dragging = false;
 
   constructor(
     private readonly camera: PerspectiveCamera,
     input: HTMLElement,
     private readonly reducedMotion: boolean,
+    private readonly onManualInput?: () => void,
   ) {
     this.removeListeners = this.listen(input);
   }
@@ -78,6 +80,19 @@ export class CameraRig {
       this.orbit.yaw = 0;
       this.orbit.pitch = 0;
     }
+  }
+
+  get isMoving() {
+    const angle = 0.001;
+    return (
+      this.dragging ||
+      this.position.distanceToSquared(this.goal.position) > 0.000001 ||
+      1 - Math.abs(this.base.dot(this.goal.orientation)) > 0.000001 ||
+      Math.abs(this.look.x - this.lookGoal.pitch) > angle ||
+      Math.abs(this.look.y - this.lookGoal.yaw) > angle ||
+      Math.abs(this.orbit.pitch - this.orbitGoal.pitch) > angle ||
+      Math.abs(this.orbit.yaw - this.orbitGoal.yaw) > angle
+    );
   }
 
   update(deltaSeconds: number) {
@@ -148,10 +163,12 @@ export class CameraRig {
 
     const onDown = (event: PointerEvent) => {
       last = { x: event.clientX, y: event.clientY };
+      this.dragging = true;
       input.setPointerCapture(event.pointerId);
     };
     const onMove = (event: PointerEvent) => {
       if (!last) return;
+      this.onManualInput?.();
       // The scene follows the finger, so the camera turns the opposite way.
       this.nudge(
         (event.clientX - last.x) * DRAG_SENSITIVITY,
@@ -161,6 +178,7 @@ export class CameraRig {
     };
     const onUp = () => {
       last = null;
+      this.dragging = false;
     };
     const onKey = (event: KeyboardEvent) => {
       const step = {
@@ -171,20 +189,26 @@ export class CameraRig {
       }[event.key];
       if (!step) return;
       event.preventDefault();
+      this.onManualInput?.();
       this.nudge(step[0]!, step[1]!);
     };
 
+    const onWheel = () => this.onManualInput?.();
     input.addEventListener('pointerdown', onDown);
     input.addEventListener('pointermove', onMove);
     input.addEventListener('pointerup', onUp);
     input.addEventListener('pointercancel', onUp);
+    input.addEventListener('lostpointercapture', onUp);
     input.addEventListener('keydown', onKey);
+    input.addEventListener('wheel', onWheel, { passive: true });
     return () => {
       input.removeEventListener('pointerdown', onDown);
       input.removeEventListener('pointermove', onMove);
       input.removeEventListener('pointerup', onUp);
       input.removeEventListener('pointercancel', onUp);
+      input.removeEventListener('lostpointercapture', onUp);
       input.removeEventListener('keydown', onKey);
+      input.removeEventListener('wheel', onWheel);
     };
   }
 }

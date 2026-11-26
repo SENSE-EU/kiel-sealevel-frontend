@@ -12,11 +12,33 @@ export function createLoader(renderer: WebGLRenderer) {
     .setDRACOLoader(draco)
     .setKTX2Loader(ktx2)
     .setMeshoptDecoder(MeshoptDecoder);
-  return {
-    loader,
-    dispose() {
+  let pending = 0;
+  let closing = false;
+  function release() {
+    if (closing && pending === 0) {
       draco.dispose();
       ktx2.dispose();
+    }
+  }
+  async function trackLoad<T>(start: () => Promise<T>) {
+    if (closing) throw new Error('Model loader has been disposed');
+    pending++;
+    try {
+      return await start();
+    } finally {
+      pending--;
+      release();
+    }
+  }
+  return {
+    loadAsync: (url: string, progress?: (event: ProgressEvent) => void) =>
+      trackLoad(() => loader.loadAsync(url, progress)),
+    parseAsync: (buffer: ArrayBuffer, path: string) =>
+      trackLoad(() => loader.parseAsync(buffer, path)),
+    dispose() {
+      if (closing) return;
+      closing = true;
+      release();
     },
   };
 }
@@ -27,9 +49,9 @@ export async function loadModel(
   renderer: WebGLRenderer,
   onProgress: (fraction: number) => void,
 ) {
-  const { loader, dispose } = createLoader(renderer);
+  const { loadAsync, dispose } = createLoader(renderer);
   try {
-    const gltf = await loader.loadAsync(url, (event) => {
+    const gltf = await loadAsync(url, (event) => {
       if (event.lengthComputable) onProgress(event.loaded / event.total);
     });
     return gltf.scene;

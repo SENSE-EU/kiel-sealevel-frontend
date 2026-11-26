@@ -1,4 +1,5 @@
 import {
+  BufferAttribute,
   CanvasTexture,
   ClampToEdgeWrapping,
   DoubleSide,
@@ -11,6 +12,7 @@ import {
   RepeatWrapping,
   SRGBColorSpace,
   Vector3,
+  type BufferGeometry,
   type Mesh,
   type Object3D,
 } from 'three';
@@ -252,6 +254,81 @@ interface Fish {
 /** The background school loops round the site on an ellipse at the edge of visibility. */
 const SCHOOL = { cx: 0.4, cz: 0.3, a: 3.7, b: 3.0, y: 1.35, speed: 0.38 };
 
+/** Close the gap between the tail lobes on the shipped herring mesh. */
+export function closeHerringTail(geometry: BufferGeometry) {
+  const position = geometry.getAttribute('position');
+  const index = geometry.getIndex();
+  if (!position || !index) return;
+  const pick = (min: number, max: number, sign: number) => {
+    for (let i = 0; i < position.count; i++) {
+      const x = position.getX(i);
+      const y = position.getY(i);
+      if (
+        x > min &&
+        x < max &&
+        Math.abs(position.getZ(i)) < 1e-4 &&
+        Math.sign(y) === sign &&
+        Math.abs(y) < 0.003
+      )
+        return i;
+    }
+    return -1;
+  };
+  const stem = -0.32 * 0.09;
+  const upper = pick(stem - 0.002, stem + 0.002, 1);
+  const lower = pick(stem - 0.002, stem + 0.002, -1);
+  const forkUpper = pick(stem - 0.0108, stem - 0.0072, 1);
+  const forkLower = pick(stem - 0.0108, stem - 0.0072, -1);
+  const corners = [upper, forkUpper, forkLower, lower];
+  if (corners.includes(-1)) return;
+
+  const xs = position.getX(upper);
+  const xe = position.getX(forkUpper);
+  for (let i = 0; i < index.count; i += 3) {
+    const a = index.getX(i);
+    const b = index.getX(i + 1);
+    const c = index.getX(i + 2);
+    const x = (position.getX(a) + position.getX(b) + position.getX(c)) / 3;
+    const y = (position.getY(a) + position.getY(b) + position.getY(c)) / 3;
+    const z = (position.getZ(a) + position.getZ(b) + position.getZ(c)) / 3;
+    if (x > xe && x < xs && Math.abs(y) < 0.0009 && Math.abs(z) < 1e-4) return;
+  }
+
+  // Keep separate vertices so the two lobes' opposing normals don't cancel at the join.
+  const start = position.count;
+  for (const [name, attribute] of Object.entries(geometry.attributes)) {
+    const count = attribute.count + corners.length;
+    const ArrayType = attribute.array.constructor as typeof Float32Array;
+    const extended = new BufferAttribute(
+      new ArrayType(count * attribute.itemSize),
+      attribute.itemSize,
+      attribute.normalized,
+    );
+    for (let i = 0; i < count; i++) {
+      for (let component = 0; component < attribute.itemSize; component++) {
+        const value =
+          i >= start && name === 'normal'
+            ? Number(component === 2)
+            : attribute.getComponent(
+                i < start ? i : corners[i - start]!,
+                component,
+              );
+        extended.setComponent(i, component, value);
+      }
+    }
+    geometry.setAttribute(name, extended);
+  }
+  geometry.setIndex([
+    ...index.array,
+    start,
+    start + 1,
+    start + 2,
+    start,
+    start + 2,
+    start + 3,
+  ]);
+}
+
 /**
  * Builds the vegetation: one InstancedMesh per species and chapter, so a hidden chapter costs nothing. The
  * fish school swims wherever the active chapter is, so it stays one batch.
@@ -284,6 +361,7 @@ export function createVegetation(
       continue;
     }
     const fauna = data.fauna?.[name];
+    if (fauna?.school) closeHerringTail(prototype.geometry);
     let material: MeshStandardMaterial;
     if (name.startsWith('VEG_Fuzz') || name.startsWith('VEG_Turf')) {
       const isTurf = name.startsWith('VEG_Turf');

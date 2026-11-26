@@ -1,11 +1,16 @@
 import { MathUtils, PerspectiveCamera, Quaternion, Vector3 } from 'three';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { CameraRig } from './CameraRig';
 
-function setup() {
+function setup(onManualInput?: () => void) {
   const input = Object.assign(new EventTarget(), { setPointerCapture() {} });
   const camera = new PerspectiveCamera();
-  const rig = new CameraRig(camera, input as unknown as HTMLElement, false);
+  const rig = new CameraRig(
+    camera,
+    input as unknown as HTMLElement,
+    false,
+    onManualInput,
+  );
   const pose = {
     position: new Vector3(1, 2, 3),
     orientation: new Quaternion(),
@@ -23,6 +28,17 @@ const degreesFromForward = (camera: PerspectiveCamera) =>
   MathUtils.radToDeg(camera.quaternion.angleTo(new Quaternion()));
 
 describe('CameraRig', () => {
+  it('hands off scripted framing on drag, wheel, or an arrow key', () => {
+    const takeOver = vi.fn();
+    const { fire } = setup(takeOver);
+    fire('pointerdown', { clientX: 0, clientY: 0, pointerId: 1 });
+    expect(takeOver).not.toHaveBeenCalled();
+    fire('pointermove', { clientX: 30, clientY: 0 });
+    fire('wheel', {});
+    fire('keydown', { key: 'ArrowLeft' });
+    expect(takeOver).toHaveBeenCalledTimes(3);
+  });
+
   it('clamps a long drag to the look-around limit and never moves the camera', () => {
     const { camera, fire, settle, pose } = setup();
     fire('pointerdown', { clientX: 0, clientY: 0, pointerId: 1 });

@@ -24,6 +24,7 @@ import {
   type PerspectiveCamera,
   type WebGLRenderer,
 } from 'three';
+import { createSurveyShot } from './surveyShot';
 import { waterize, type WaterMaterialData, type WaterUniforms } from './water';
 
 /**
@@ -57,6 +58,8 @@ export interface PlumeConfig {
 export interface SurveyConfig {
   /** Hotspot that times the pass so the AUV crosses its view. */
   hotspot: string;
+  /** Model node the camera settles on after the pass. */
+  subject: string;
   /** Lanes along x at these z, relative to the chapter centre. */
   lanes: number[];
   from: number;
@@ -633,6 +636,21 @@ export function createSurvey(
   );
   const curve = new CatmullRomCurve3(waypoints, true, 'centripetal', 0.5);
   const length = curve.getLength();
+  const subject = root.getObjectByName(config.subject) as Mesh | undefined;
+  if (subject?.isMesh && !subject.geometry.boundingSphere)
+    subject.geometry.computeBoundingSphere();
+  const sphere = subject?.isMesh ? subject.geometry.boundingSphere : null;
+  const shot =
+    sphere && subject
+      ? createSurveyShot(
+          camera,
+          curve,
+          length,
+          config.speed,
+          subject.localToWorld(sphere.center.clone()),
+          centre,
+        )
+      : null;
 
   const { body, blades } = auvGeometry();
   const material = new MeshStandardMaterial({
@@ -759,6 +777,21 @@ export function createSurvey(
   const labelAt = new Vector3();
 
   return {
+    startShot(anchor: string) {
+      if (anchor !== config.hotspot || !shot) return false;
+      waitingForArrival = false;
+      shot.start();
+      return true;
+    },
+    updateShot(seconds: number, delta: number) {
+      const u = shot?.update(delta);
+      if (u === undefined) return false;
+      phase = u - (seconds * config.speed) / length;
+      return true;
+    },
+    cancelShot() {
+      shot?.cancel();
+    },
     /** Featured at its hotspot: brighter, labelled, and timed to cross the view. */
     focus(anchor: string | null) {
       const on = anchor === config.hotspot;
