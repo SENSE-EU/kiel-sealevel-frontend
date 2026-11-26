@@ -15,7 +15,7 @@ npm run dev
 ```
 
 This reads content from a local [kiel-sealevel-cms](https://github.com/SENSE-EU/kiel-sealevel-cms) on
-<http://localhost:1337> (start it first, see that repo's README), through the dev server's proxy for `/api` and `/uploads`.
+<http://localhost:1337> (start it first, see that repo's README), through the dev server's proxy for `/cms` and `/uploads`.
 Open <http://localhost:5173>. To use a CMS somewhere else, set `STRAPI_PROXY_TARGET` in `.env.local`.
 
 To work without a backend, run `npm run dev:mock` instead: built-in placeholder content and a procedural placeholder
@@ -58,5 +58,5 @@ src/
 ## Deployment
 
 `.github/workflows/ci.yml` checks every PR, and on `main` pushes an image to the container registry. It needs the
-repository secrets `ACR_USERNAME` and `ACR_PASSWORD`. The image serves only the static build; `/api`, `/uploads`, HTTPS
+repository secrets `ACR_USERNAME` and `ACR_PASSWORD`. The image serves only the static build; `/cms`, `/uploads`, HTTPS
 and caching belong to the reverse proxy in front of it. No secrets or bought 3D assets belong in this repo.

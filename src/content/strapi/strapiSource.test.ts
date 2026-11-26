@@ -55,7 +55,7 @@ function stubApi(routes: Record<string, Reply>) {
   return fetchMock;
 }
 
-const scene = (locale: string) => `/api/public/scenes/munitions?${locale}`;
+const scene = (locale: string) => `/cms/api/public/scenes/munitions?${locale}`;
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -80,8 +80,8 @@ describe('strapiSource.getScene', () => {
     const urls = fetchMock.mock.calls.map((call) => call[0]).sort();
 
     expect(urls).toEqual([
-      '/api/public/scenes/munitions?locale=de',
-      '/api/public/scenes/munitions?locale=en',
+      '/cms/api/public/scenes/munitions?locale=de',
+      '/cms/api/public/scenes/munitions?locale=en',
     ]);
   });
 
@@ -130,8 +130,8 @@ describe('strapiSource.listScenes', () => {
       cardImage: null,
     });
     stubApi({
-      '/api/public/scenes?de': { data: [summary('a', 'A de')] },
-      '/api/public/scenes?en': {
+      '/cms/api/public/scenes?de': { data: [summary('a', 'A de')] },
+      '/cms/api/public/scenes?en': {
         data: [summary('a', 'A en', 'Teaser'), summary('b', 'B en')],
       },
     });
@@ -154,8 +154,8 @@ describe('strapiSource.listScenes', () => {
     };
     const badSlug = { ...valid, id: 'b', slug: 'Bad_Slug', title: 'B' };
     stubApi({
-      '/api/public/scenes?de': { data: [valid, badSlug] },
-      '/api/public/scenes?en': { data: [valid, badSlug] },
+      '/cms/api/public/scenes?de': { data: [valid, badSlug] },
+      '/cms/api/public/scenes?en': { data: [valid, badSlug] },
     });
 
     expect((await strapiSource.listScenes('de')).map((s) => s.id)).toEqual([
@@ -167,8 +167,8 @@ describe('strapiSource.listScenes', () => {
   it('rejects a list response with the wrong shape', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     stubApi({
-      '/api/public/scenes?de': { scenes: [] },
-      '/api/public/scenes?en': { scenes: [] },
+      '/cms/api/public/scenes?de': { scenes: [] },
+      '/cms/api/public/scenes?en': { scenes: [] },
     });
     await expect(strapiSource.listScenes('de')).rejects.toBeInstanceOf(
       ContentUnavailableError,
@@ -177,8 +177,8 @@ describe('strapiSource.listScenes', () => {
 
   it('is empty when there are no scenes', async () => {
     stubApi({
-      '/api/public/scenes?de': { data: [] },
-      '/api/public/scenes?en': { data: [] },
+      '/cms/api/public/scenes?de': { data: [] },
+      '/cms/api/public/scenes?en': { data: [] },
     });
     expect(await strapiSource.listScenes('de')).toEqual([]);
   });

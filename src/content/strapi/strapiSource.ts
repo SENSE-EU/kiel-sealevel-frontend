@@ -14,7 +14,7 @@ import { fallbackLocale, type Locale } from '@/i18n/locales';
 import { mergeById, mergeScene } from './merge';
 
 /**
- * GETs one of the CMS's public endpoints (`/api/public/...`, see kiel-sealevel-cms docs/public-api.md)
+ * GETs one of the CMS's public endpoints (`/cms/api/public/...`, see kiel-sealevel-cms docs/public-api.md)
  * and checks the body against the shared contract. Resolves to null on 404, which the API returns
  * when the scene doesn't exist in that language.
  */
@@ -25,7 +25,7 @@ async function fetchPublic<T>(
   signal?: AbortSignal,
 ): Promise<T | null> {
   const response = await fetch(
-    `/api/public/${path}?${new URLSearchParams({ locale })}`,
+    `/cms/api/public/${path}?${new URLSearchParams({ locale })}`,
     { signal },
   );
   if (response.status === 404) return null;
@@ -35,7 +35,7 @@ async function fetchPublic<T>(
   const parsed = schema.safeParse(await response.json());
   if (!parsed.success) {
     console.error(
-      `[content] /api/public/${path} broke the contract`,
+      `[content] /cms/api/public/${path} broke the contract`,
       parsed.error,
     );
     throw new ContentUnavailableError('CMS response broke the contract', {

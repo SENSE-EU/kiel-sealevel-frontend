@@ -64,8 +64,8 @@ The app uses the CMS's read-only public API (see `docs/public-api.md` in kiel-se
 
 | Request                                  | Used for                       |
 | ---------------------------------------- | ------------------------------ |
-| `GET /api/public/scenes?locale=de`       | Scene list (`SceneSummaryDto`) |
-| `GET /api/public/scenes/:slug?locale=en` | One scene (`SceneDetailDto`)   |
+| `GET /cms/api/public/scenes?locale=de`       | Scene list (`SceneSummaryDto`) |
+| `GET /cms/api/public/scenes/:slug?locale=en` | One scene (`SceneDetailDto`)   |
 
 It asks for both locales (`de`, `en`) and merges them by `id`, so anything missing in the requested language falls back
 to the other one. A 404 means the scene doesn't exist in that language. Every response is checked against the shared

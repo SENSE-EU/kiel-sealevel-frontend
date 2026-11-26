@@ -14,8 +14,15 @@ export default defineConfig(({ mode }) => {
       alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
     },
     server: {
-      // Same paths as the production reverse proxy, so the app only ever uses relative URLs.
-      proxy: { '/api': strapi, '/uploads': strapi },
+      // Caddy strips /cms before forwarding to Strapi in deployed environments.
+      proxy: {
+        '/cms': {
+          target: strapi,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/cms(?=\/|$)/, ''),
+        },
+        '/uploads': strapi,
+      },
     },
     // Three.js is one large chunk, loaded only on entering a scene (about 200 kB gzipped).
     build: { chunkSizeWarningLimit: 800 },
