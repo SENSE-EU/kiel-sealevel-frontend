@@ -22,23 +22,14 @@ export type InlineNode = InlineNodeDto;
 export type BlockNode = BlockNodeDto;
 export type Viewpoint = ViewpointDto;
 export type SceneSummary = SceneSummaryDto;
-
-/** A scene and its hotspots as the CMS sends them. */
-export type SceneData = SceneDetailDto;
-export type HotspotData = HotspotDto;
-
-/** One picture or video in a card's gallery. */
+export type Hotspot = HotspotDto;
+export type Scene = SceneDetailDto;
+/** One picture or video on a hotspot card. */
 export interface CardMedia {
   kind: 'image' | 'video';
   url: string;
   alt: string;
-  /** Shown before a video plays. */
-  poster?: string;
 }
-
-/** A hotspot as the app uses it: the CMS fields plus its gallery, in the order it shows. */
-export type Hotspot = HotspotData & { media: CardMedia[] };
-export type Scene = Omit<SceneData, 'hotspots'> & { hotspots: Hotspot[] };
 
 export interface ContentSource {
   listScenes(locale: Locale, signal?: AbortSignal): Promise<SceneSummary[]>;
@@ -47,7 +38,7 @@ export interface ContentSource {
     slug: string,
     locale: Locale,
     signal?: AbortSignal,
-  ): Promise<SceneData | null>;
+  ): Promise<Scene | null>;
 }
 
 export class ContentUnavailableError extends Error {

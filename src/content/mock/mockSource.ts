@@ -1,9 +1,4 @@
-import type {
-  ContentSource,
-  HotspotData,
-  RichText,
-  SceneData,
-} from '@/content/types';
+import type { ContentSource, Hotspot, RichText, Scene } from '@/content/types';
 import type { Locale } from '@/i18n/locales';
 
 type Localised = Record<Locale, string>;
@@ -128,14 +123,14 @@ const scenes: MockScene[] = [
   },
 ];
 
-function buildScene(mock: MockScene, locale: Locale): SceneData {
-  const hotspots = mock.hotspots.map((h, index): HotspotData => ({
+function buildScene(mock: MockScene, locale: Locale): Scene {
+  const hotspots = mock.hotspots.map((h, index): Hotspot => ({
     id: `${mock.slug}-hs-${index + 1}`,
     anchor: `hs_${index + 1}`,
     order: index + 1,
     title: h.title[locale],
     body: paragraph((h.body ?? placeholderBody)[locale]),
-    // Placeholder pictures are added for every source in src/content/media.ts.
+    images: [],
     image: null,
     video: h.video
       ? { url: '/placeholders/hotspot-video.webm', alt: '' }
@@ -149,6 +144,7 @@ function buildScene(mock: MockScene, locale: Locale): SceneData {
       order: 99,
       title: 'Missing anchor',
       body: '',
+      images: [],
       image: null,
       video: null,
     });

@@ -105,7 +105,6 @@ export function MediaGallery({
                     playsInline
                     preload="metadata"
                     src={entry.url}
-                    {...(entry.poster && { poster: entry.poster })}
                     onPlay={() => onVideoEvent(index, 'play')}
                     onPause={() => onVideoEvent(index, 'pause')}
                     onEnded={() => onVideoEvent(index, 'pause')}

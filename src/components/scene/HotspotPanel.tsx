@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RichText } from '@/components/RichText';
+import { cardMedia } from '@/content/media';
 import type { Hotspot } from '@/content/types';
 import { Close, Collapse, Expand, Pause, Play } from './icons';
 import { glide } from './layout/shared';
@@ -59,7 +60,7 @@ function CardContent({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const media = hotspot.media;
+  const media = cardMedia(hotspot);
   const [current, setCurrent] = useState(0);
   const videos = useRef(new Map<number, HTMLVideoElement>());
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);

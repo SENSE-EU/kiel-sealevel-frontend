@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { hotspotMedia } from './media';
-import type { HotspotData } from './types';
+import { cardMedia } from './media';
+import type { Hotspot } from './types';
 
-const hotspot = (overrides: Partial<HotspotData>): HotspotData => ({
+const hotspot = (overrides: Partial<Hotspot>): Hotspot => ({
   id: 'h1',
   title: 'Title',
   body: '',
+  images: [],
   image: null,
   video: null,
   anchor: 'hs_1',
@@ -13,33 +14,34 @@ const hotspot = (overrides: Partial<HotspotData>): HotspotData => ({
   ...overrides,
 });
 
-describe('hotspotMedia', () => {
-  it('puts the CMS video first, with the image as its poster, then the image', () => {
-    const media = hotspotMedia(
-      hotspot({
-        video: { url: '/uploads/v.webm', alt: '' },
-        image: { url: '/uploads/i.png', alt: 'Casings' },
-      }),
-      'en',
-    );
-    expect(media.slice(0, 2)).toEqual([
-      {
-        kind: 'video',
-        url: '/uploads/v.webm',
-        alt: '',
-        poster: '/uploads/i.png',
-      },
-      { kind: 'image', url: '/uploads/i.png', alt: 'Casings' },
+describe('cardMedia', () => {
+  it('shows the video first, then every image in order', () => {
+    const images = [
+      { url: '/uploads/a.jpg', alt: 'Sea mine' },
+      { url: '/uploads/b.jpg', alt: 'Depth charge' },
+    ];
+    expect(
+      cardMedia(
+        hotspot({
+          images,
+          image: images[0]!,
+          video: { url: '/uploads/v.mp4', alt: '' },
+        }),
+      ),
+    ).toEqual([
+      { kind: 'video', url: '/uploads/v.mp4', alt: '' },
+      { kind: 'image', url: '/uploads/a.jpg', alt: 'Sea mine' },
+      { kind: 'image', url: '/uploads/b.jpg', alt: 'Depth charge' },
     ]);
   });
 
-  it('adds placeholders after the CMS media, with alt text in the page language', () => {
-    const media = hotspotMedia(hotspot({ order: 3 }), 'de');
-    expect(media.length).toBeGreaterThan(1);
-    expect(media.some((item) => item.kind === 'video')).toBe(true);
-    for (const item of media.filter((entry) => entry.kind === 'image')) {
-      expect(item.url).toMatch(/^\/placeholders\//);
-      expect(item.alt).toBe('Platzhalterbild aus der 3D-Szene');
-    }
+  it('falls back to the single image when the list is empty', () => {
+    expect(
+      cardMedia(hotspot({ image: { url: '/uploads/i.png', alt: 'Casings' } })),
+    ).toEqual([{ kind: 'image', url: '/uploads/i.png', alt: 'Casings' }]);
+  });
+
+  it('is empty without media', () => {
+    expect(cardMedia(hotspot({}))).toEqual([]);
   });
 });
