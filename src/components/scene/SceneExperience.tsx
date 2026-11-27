@@ -130,6 +130,7 @@ export function SceneExperience({
     scene,
     locale,
     hotspots,
+    hotspotsChecked: state.status !== 'loading',
     visited,
     activeHotspotId,
     onOpenHotspot: openHotspot,

@@ -45,7 +45,7 @@ rule in `.gitignore`. To take a new delivery, copy those files over the old ones
 the delivery (`python -m http.server` in its folder) before shipping.
 
 The local content still uses the placeholder anchors (`vp_1`, `hs_1` and so on), so the package maps them to the
-model's names. Chapter 3 (the bubble curtain, hotspots 5 and 6) isn't built yet, so those stay hidden. Before
+model's names: `hs_5` is `hs_curtain` (the bubble curtain), `hs_6` is `hs_munimar` and `vp_4` is `vp_curtain`. Before
 this goes to production, the CMS needs a way to hold a multi-file scene, and the CMS content should use the
 model's own anchor names.
 
