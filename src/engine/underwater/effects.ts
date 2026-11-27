@@ -36,6 +36,8 @@ import { waterize, type WaterMaterialData, type WaterUniforms } from './water';
 type Locale = 'en' | 'de';
 /** Pixels at the top of the screen a pinned label stays out of. */
 const HEADER_CLEARANCE = 120;
+/** Pixels a label keeps from the centre of its hotspot's pin: the pin's radius and a clear gap. */
+const PIN_CLEARANCE = 50;
 
 export type LabelText = Record<Locale, [title: string, note: string]>;
 
@@ -43,6 +45,10 @@ export type LabelText = Record<Locale, [title: string, note: string]>;
 export interface Overlay {
   element: HTMLElement;
   locale: () => string;
+  /** Where a hotspot's pin sits in the scene, once the model is in. */
+  pinAt?: (anchor: string) => Vector3 | null;
+  /** Pixels of the right edge page UI covers right now (the open card on wide screens). */
+  coveredRight?: () => number;
 }
 
 export interface PlumeConfig {
@@ -74,9 +80,11 @@ export interface SurveyConfig {
 
 /** A label pinned to a point in the scene, drawn over the canvas. */
 function createLabel(
-  { element: overlay, locale: pageLocale }: Overlay,
+  { element: overlay, locale: pageLocale, pinAt, coveredRight }: Overlay,
   text: LabelText,
   warm: boolean,
+  /** The hotspot whose pin the label keeps clear of. */
+  pinAnchor?: string,
 ) {
   const element = document.createElement('div');
   const title = document.createElement('b');
@@ -113,6 +121,43 @@ function createLabel(
   overlay.append(element);
   let shownLocale = '';
   const projected = new Vector3();
+  let pin: Vector3 | null = null;
+  const pinOnScreen = new Vector3();
+
+  /**
+   * Moves the label (its bottom centre at x, y) off the pin when it would sit on or right next to it: above
+   * the pin if that's clear of the header, else beside it, else below it.
+   */
+  const clearOfPin = (
+    x: number,
+    y: number,
+    camera: PerspectiveCamera,
+    width: number,
+    height: number,
+  ): [number, number] => {
+    if (pinAnchor && !pin) pin = pinAt?.(pinAnchor) ?? null;
+    if (!pin) return [x, y];
+    pinOnScreen.copy(pin).project(camera);
+    if (pinOnScreen.z >= 1) return [x, y];
+    const px = ((pinOnScreen.x + 1) / 2) * width;
+    const py = ((1 - pinOnScreen.y) / 2) * height;
+    const w = element.offsetWidth;
+    const h = element.offsetHeight;
+    const overlaps =
+      Math.abs(x - px) < w / 2 + PIN_CLEARANCE &&
+      y > py - PIN_CLEARANCE &&
+      y - h < py + PIN_CLEARANCE;
+    if (!overlaps) return [x, y];
+    if (py - PIN_CLEARANCE - h >= HEADER_CLEARANCE)
+      return [x, py - PIN_CLEARANCE];
+    const side = PIN_CLEARANCE + w / 2;
+    const edge = 8;
+    if (px + side + w / 2 <= width - (coveredRight?.() ?? 0) - edge)
+      return [px + side, py + h / 2];
+    if (px - side - w / 2 >= edge) return [px - side, py + h / 2];
+    return [x, py + PIN_CLEARANCE + h];
+  };
+
   return {
     /** Shows the label at `point`, or hides it. `edge` lets it sit a little off screen, pinned to the edge. */
     update(
@@ -144,14 +189,26 @@ function createLabel(
       const width = overlay.clientWidth;
       const height = overlay.clientHeight;
       if (edge) {
-        const margin = Math.min(0.8, (110 / width) * 2);
+        // Whole label on screen, with a little room to the edge.
+        const margin = Math.min(
+          0.8,
+          ((element.offsetWidth / 2 + 8) / width) * 2,
+        );
         projected.x = MathUtils.clamp(projected.x, -1 + margin, 1 - margin);
         // Clear of the header (title, language switch, visited count). The label hangs above its point.
         const clearance = HEADER_CLEARANCE + element.offsetHeight;
         const top = Math.min(0.85, 1 - (2 * clearance) / height);
         projected.y = MathUtils.clamp(projected.y, -0.8, top);
       }
-      element.style.translate = `${((projected.x + 1) / 2) * width}px ${((1 - projected.y) / 2) * height}px`;
+      let x = ((projected.x + 1) / 2) * width;
+      let y = ((1 - projected.y) / 2) * height;
+      if (edge) {
+        // Out from under the open card, if there's room left of it.
+        const right = width - (coveredRight?.() ?? 0) - 8;
+        x = Math.min(x, Math.max(right - element.offsetWidth / 2, width / 2));
+        [x, y] = clearOfPin(x, y, camera, width, height);
+      }
+      element.style.translate = `${x}px ${y}px`;
       element.style.opacity = opacity.toFixed(2);
       element.style.visibility = 'visible';
     },
@@ -474,7 +531,12 @@ export function createPlume(config: PlumeConfig, context: EffectContext) {
     mouth.y + 0.2,
     mouth.z + direction.y * 0.2,
   );
-  const label = createLabel(context.overlay, config.label, true);
+  const label = createLabel(
+    context.overlay,
+    config.label,
+    true,
+    config.hotspot,
+  );
   let level = 0;
   let target = 0;
 

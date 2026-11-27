@@ -56,6 +56,8 @@ const PIVOT_FURTHEST = 12;
 /** Keeps a focused anchor clear of the hotspot panel: a side card on wide screens, a bottom sheet on phones. */
 const WIDE_SCREEN = 768;
 const SIDE_PANEL_SHIFT = 195;
+/** Pixels of the right edge the side card covers (its width and its gap to the edge: md:w-96, md:right-5). */
+const SIDE_PANEL_COVER = 404;
 const SHEET_SHIFT_FRACTION = 0.27;
 const SHIFT_SMOOTHING = 2.2;
 /** Height kept for the header when lifting the scene above bottom UI. */
@@ -141,7 +143,18 @@ export class SceneEngine {
           this.renderer,
           this.scene,
           this.camera,
-          { element: this.container, locale: () => this.locale },
+          {
+            element: this.container,
+            locale: () => this.locale,
+            pinAt: (name) => {
+              const anchor = this.anchor(name);
+              return anchor ? this.bounds(anchor).center.clone() : null;
+            },
+            coveredRight: () =>
+              this.focusing && this.container.clientWidth >= WIDE_SCREEN
+                ? SIDE_PANEL_COVER
+                : 0,
+          },
           onProgress,
         );
         if (this.disposed) {
