@@ -13,6 +13,8 @@ export interface LayoutProps {
   scene: Scene;
   locale: Locale;
   hotspots: Hotspot[];
+  /** False while the model loads: until it's in, the CMS may list points the model has no anchor for. */
+  hotspotsChecked: boolean;
   visited: string[];
   /** The hotspot whose panel is open. */
   activeHotspotId: string | null;
@@ -135,6 +137,7 @@ export function SceneHeader({
   scene,
   locale,
   hotspots,
+  hotspotsChecked,
   visited,
   activeHotspotId,
   onOpenHotspot,
@@ -161,13 +164,16 @@ export function SceneHeader({
       </div>
       <div className="pointer-events-auto flex shrink-0 flex-col items-end gap-2">
         <LanguageSwitch />
-        <HotspotList
-          hotspots={hotspots}
-          visited={visited}
-          activeHotspotId={activeHotspotId}
-          onOpen={onOpenHotspot}
-          credits={scene.credits.trim()}
-        />
+        {/* It shows above the loading screen; counting before the check would drop a point once loaded. */}
+        {hotspotsChecked && (
+          <HotspotList
+            hotspots={hotspots}
+            visited={visited}
+            activeHotspotId={activeHotspotId}
+            onOpen={onOpenHotspot}
+            credits={scene.credits.trim()}
+          />
+        )}
       </div>
     </header>
   );
