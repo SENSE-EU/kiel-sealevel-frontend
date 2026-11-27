@@ -29,6 +29,7 @@ const LOCAL_PACKAGES: Record<string, ScenePackage> = {
       ['hs_pile', 1.7],
       ['hs_corrosion', 0.8],
       ['hs_lifting', 1.45],
+      ['hs_munimar', 1.2],
     ],
     plume: {
       casing: 'PROP_Shell_155mm_01',
@@ -60,8 +61,8 @@ const LOCAL_PACKAGES: Record<string, ScenePackage> = {
         ],
       },
     },
-    // The local content still uses the generic placeholder anchors. Chapter 3 (the bubble curtain and
-    // hotspots 5 and 6) isn't built yet, so those stay unmapped and are hidden.
+    // The CMS content uses the generic anchors; these are the model's names for them. vp_4 (the bubble
+    // curtain's viewpoint) is in the model but not in the CMS yet.
     anchorAliases: {
       vp_1: 'vp_pile',
       vp_2: 'vp_casing',
@@ -70,6 +71,9 @@ const LOCAL_PACKAGES: Record<string, ScenePackage> = {
       hs_2: 'hs_corrosion',
       hs_3: 'hs_survey',
       hs_4: 'hs_lifting',
+      hs_5: 'hs_curtain',
+      hs_6: 'hs_munimar',
+      vp_4: 'vp_curtain',
     },
   },
 };
