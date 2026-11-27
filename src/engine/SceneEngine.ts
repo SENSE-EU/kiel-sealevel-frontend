@@ -4,15 +4,23 @@ import {
   NoToneMapping,
   PerspectiveCamera,
   Quaternion,
+  Raycaster,
   Scene,
   Sphere,
   Vector3,
   WebGLRenderer,
+  type BufferGeometry,
+  type Material,
+  type Mesh,
   type Object3D,
 } from 'three';
 import { AnchorHighlight } from './AnchorHighlight';
 import { checkBudget } from './budget';
-import { CameraRig, lookAtOrientation } from './CameraRig';
+import {
+  CameraRig,
+  DEFAULT_PIVOT_DISTANCE,
+  lookAtOrientation,
+} from './CameraRig';
 import { disposeObject } from './disposeObject';
 import { createEnvironment, swayOffset } from './environment';
 import { loadModel } from './loadModel';
@@ -41,6 +49,10 @@ const MAX_VERTICAL_FOV = 88;
 const MAX_FRAME_SECONDS = 0.1;
 const FOCUS_RADIUS_FACTOR = 2.6;
 const FOCUS_APPROACH = 0.6;
+// A viewpoint without a look-at target circles the first surface straight ahead, within this range, so a
+// stray leaf right in front of the camera doesn't become the pivot.
+const PIVOT_NEAREST = 2;
+const PIVOT_FURTHEST = 12;
 /** Keeps a focused anchor clear of the hotspot panel: a side card on wide screens, a bottom sheet on phones. */
 const WIDE_SCREEN = 768;
 const SIDE_PANEL_SHIFT = 195;
@@ -253,7 +265,11 @@ export class SceneEngine {
     this.focusing = hotspot !== null && panelOpen;
     const pose = hotspot
       ? this.focusPose(hotspot, position)
-      : { position, orientation };
+      : {
+          position,
+          orientation,
+          pivot: this.viewpointPivot(viewpoint, position, orientation),
+        };
 
     this.rig.moveTo(pose, !this.hasView);
     this.hasView = true;
@@ -351,6 +367,39 @@ export class SceneEngine {
       ? lookAtOrientation(position, target.getWorldPosition(new Vector3()))
       : viewpoint.getWorldQuaternion(new Quaternion());
     return { position, orientation };
+  }
+
+  /** What dragging at a viewpoint circles: its look-at target, or else what it looks at straight ahead. */
+  private viewpointPivot(
+    viewpoint: Object3D,
+    position: Vector3,
+    orientation: Quaternion,
+  ) {
+    const target = this.partner(viewpoint, 'target');
+    if (target) return target.getWorldPosition(new Vector3());
+    const forward = new Vector3(0, 0, -1).applyQuaternion(orientation);
+    let distance = DEFAULT_PIVOT_DISTANCE;
+    if (this.model) {
+      const ray = new Raycaster(
+        position,
+        forward,
+        PIVOT_NEAREST,
+        PIVOT_FURTHEST,
+      );
+      // Only something you can see: not hidden helpers, particles or the hotspot effects' veils.
+      const shown = (object: Object3D | null): boolean =>
+        !object || (object.visible && shown(object.parent));
+      const hit = ray
+        .intersectObject(this.model, true)
+        .find(
+          ({ object }) =>
+            (object as Mesh).isMesh &&
+            !(object as Mesh<BufferGeometry, Material>).material.transparent &&
+            shown(object),
+        );
+      if (hit) distance = hit.distance;
+    }
+    return position.clone().addScaledVector(forward, distance);
   }
 
   private bounds(anchor: Object3D) {

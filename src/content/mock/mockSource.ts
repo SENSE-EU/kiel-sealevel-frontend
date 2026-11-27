@@ -1,4 +1,9 @@
-import type { ContentSource, Hotspot, RichText, Scene } from '@/content/types';
+import type {
+  ContentSource,
+  HotspotData,
+  RichText,
+  SceneData,
+} from '@/content/types';
 import type { Locale } from '@/i18n/locales';
 
 type Localised = Record<Locale, string>;
@@ -123,14 +128,14 @@ const scenes: MockScene[] = [
   },
 ];
 
-function buildScene(mock: MockScene, locale: Locale): Scene {
-  const hotspots = mock.hotspots.map((h, index): Hotspot => ({
+function buildScene(mock: MockScene, locale: Locale): SceneData {
+  const hotspots = mock.hotspots.map((h, index): HotspotData => ({
     id: `${mock.slug}-hs-${index + 1}`,
     anchor: `hs_${index + 1}`,
     order: index + 1,
     title: h.title[locale],
     body: paragraph((h.body ?? placeholderBody)[locale]),
-    // No placeholder image: a blank picture only looks like empty space. Real images come from the CMS.
+    // Placeholder pictures are added for every source in src/content/media.ts.
     image: null,
     video: h.video
       ? { url: '/placeholders/hotspot-video.webm', alt: '' }

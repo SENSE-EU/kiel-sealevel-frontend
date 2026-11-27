@@ -27,7 +27,7 @@
     "noWebgl": "3D ist auf diesem Gerät nicht verfügbar. Alle Inhalte findest du weiterhin in der Liste der Stationen."
   },
   "scene": {
-    "canvasLabel": "3D-Unterwasserszene. Zum Umsehen ziehen oder die Pfeiltasten verwenden.",
+    "canvasLabel": "3D-Unterwasserszene. Zum Drehen ziehen, zum Zoomen scrollen oder mit zwei Fingern zoomen. Pfeiltasten und + / − gehen auch.",
     "back": "Alle Szenen",
     "hotspots": "Stationen",
     "openHotspot": "Öffnen: {{title}}",
@@ -40,6 +40,10 @@
     "hotspotNumber": "Station {{number}} / {{total}}",
     "mediaImage": "Bild",
     "mediaVideo": "Video",
+    "media": "Bilder und Videos",
+    "mediaPosition": "{{number}} von {{total}}",
+    "previousMedia": "Vorheriges Bild",
+    "nextMedia": "Nächstes Bild",
     "playVideo": "Video abspielen",
     "pauseVideo": "Video anhalten",
     "overview": "Überblick",
