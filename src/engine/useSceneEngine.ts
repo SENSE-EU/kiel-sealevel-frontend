@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { SceneEngine, type ModelSource } from './SceneEngine';
+import type { ModelSource, SceneEngine } from './SceneEngine';
 
 type Loaded =
   | { key: string; engine: SceneEngine; anchors: ReadonlySet<string> }
@@ -27,6 +27,9 @@ export function useSceneEngine(
 
     async function start() {
       try {
+        // Three.js is most of the scene page's code; the page around it shows while it arrives.
+        const { SceneEngine } = await import('./SceneEngine');
+        if (!active) return;
         engine = new SceneEngine(containerRef.current!, slug);
         const source: ModelSource | null = modelUrl
           ? { url: modelUrl, ...(sizeBytes !== undefined && { sizeBytes }) }

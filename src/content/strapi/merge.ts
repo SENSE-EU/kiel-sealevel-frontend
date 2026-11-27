@@ -1,4 +1,4 @@
-import type { SceneData } from '@/content/types';
+import type { Scene } from '@/content/types';
 
 const byOrder = (a: { order: number }, b: { order: number }) =>
   a.order - b.order;
@@ -37,9 +37,9 @@ export function mergeById<T extends { id: string }>(
 }
 
 export function mergeScene(
-  primary: SceneData | null,
-  fallback: SceneData | null,
-): SceneData | null {
+  primary: Scene | null,
+  fallback: Scene | null,
+): Scene | null {
   if (!primary || !fallback) return primary ?? fallback;
   return {
     ...preferFilled(primary, fallback),

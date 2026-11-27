@@ -50,7 +50,7 @@ this goes to production, the CMS needs a way to hold a multi-file scene, and the
 model's own anchor names.
 
 The built-in scenes (`src/engine/placeholderScene.ts`) use `vp_1` to `vp_4` for viewpoints and `hs_1` to `hs_6` for
-hotspots. The first viewpoint is also the landing page's backdrop view.
+hotspots. The landing page shows a still (`public/hero/`), not a live scene.
 
 ## Model budget (reference phone)
 
@@ -79,11 +79,9 @@ result, so the frontend still builds without the CMS repo.
 Notes:
 
 - **Image alt text** comes from the media file's `alternativeText` in the Media Library.
-- **Card media:** a hotspot's card shows a gallery (swipe on touch, arrows with a mouse). The CMS holds one `image`
-  and one `video` per hotspot for now; the video comes first, then the image. Until it has a gallery field and the
-  real pictures, `src/content/media.ts` adds placeholder stills rendered from the S1 scene
-  (`public/placeholders/gallery-*.webp`) to every card. Turn `PLACEHOLDER_GALLERY` off there when the real media
-  arrives.
+- **Card media** is a gallery (swipe on touch, arrows with a mouse): the hotspot's `video` first, if it has one,
+  then its `images` in the order set in the CMS. `image` (the first of `images`) is only read when `images` is
+  empty (`src/content/media.ts`).
 - **`body`** is a Blocks field. A plain text string also renders, but Markdown would show as raw text.
 - **`model`** empty means the built-in fallback scene is used.
 - **`credits`** shows at the bottom of the scene's points-of-interest menu (top right), when it isn't empty.

@@ -7,6 +7,7 @@ const hotspot = (id: string, title: string, order: number) => ({
   id,
   title,
   body: 'text',
+  images: [],
   image: null,
   video: null,
   anchor: `hs_${id}`,
