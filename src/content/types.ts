@@ -29,6 +29,7 @@ export interface CardMedia {
   kind: 'image' | 'video';
   url: string;
   alt: string;
+  caption?: string;
 }
 
 export interface ContentSource {

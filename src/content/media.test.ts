@@ -17,7 +17,11 @@ const hotspot = (overrides: Partial<Hotspot>): Hotspot => ({
 describe('cardMedia', () => {
   it('shows the video first, then every image in order', () => {
     const images = [
-      { url: '/uploads/a.jpg', alt: 'Sea mine' },
+      {
+        url: '/uploads/a.jpg',
+        alt: 'Sea mine',
+        caption: 'Unexploded sea mine on the seabed',
+      },
       { url: '/uploads/b.jpg', alt: 'Depth charge' },
     ];
     expect(
@@ -30,7 +34,12 @@ describe('cardMedia', () => {
       ),
     ).toEqual([
       { kind: 'video', url: '/uploads/v.mp4', alt: '' },
-      { kind: 'image', url: '/uploads/a.jpg', alt: 'Sea mine' },
+      {
+        kind: 'image',
+        url: '/uploads/a.jpg',
+        alt: 'Sea mine',
+        caption: 'Unexploded sea mine on the seabed',
+      },
       { kind: 'image', url: '/uploads/b.jpg', alt: 'Depth charge' },
     ]);
   });

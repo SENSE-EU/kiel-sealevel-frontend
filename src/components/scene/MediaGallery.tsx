@@ -37,6 +37,7 @@ export function MediaGallery({
   const strip = useRef<HTMLDivElement>(null);
   const item = media[current] ?? media[0]!;
   const several = media.length > 1;
+  const caption = item.kind === 'image' ? item.caption?.trim() : undefined;
 
   const nearest = () => {
     const element = strip.current;
@@ -155,29 +156,42 @@ export function MediaGallery({
           >
             <ChevronRight />
           </button>
-          <span
-            aria-hidden
-            className="pointer-events-none absolute right-3.5 bottom-4 flex gap-1.5"
-          >
-            {media.map((entry, index) => (
-              <span
-                key={`${entry.url}-${index}`}
-                className={`size-1.5 rounded-full transition-colors ${index === current ? 'bg-foam' : 'bg-foam/35'}`}
-              />
-            ))}
-          </span>
         </>
       )}
 
-      {/* Already in the page language; browser translation would freeze the counter as it changes. */}
-      <span
-        translate="no"
-        className="pointer-events-none absolute bottom-3 left-3.5 rounded-full border border-line bg-abyss/40 px-2.5 py-0.5 label text-foam backdrop-blur-md"
-      >
-        {`${item.kind === 'video' ? t('scene.mediaVideo') : t('scene.mediaImage')}${
-          several ? ` · ${current + 1}/${media.length}` : ''
-        }`}
-      </span>
+      <div className="pointer-events-none absolute right-0 bottom-0 left-0">
+        <div className="relative h-0">
+          {/* Already in the page language; browser translation would freeze the counter as it changes. */}
+          <span
+            translate="no"
+            className="absolute bottom-3 left-3.5 rounded-full border border-line bg-abyss/40 px-2.5 py-0.5 label text-foam backdrop-blur-md"
+          >
+            {`${item.kind === 'video' ? t('scene.mediaVideo') : t('scene.mediaImage')}${
+              several ? ` · ${current + 1}/${media.length}` : ''
+            }`}
+          </span>
+        </div>
+        <div className="border-t border-line bg-abyss/40 px-3.5 py-1.5 backdrop-blur-md">
+          <div className="flex items-center gap-3">
+            <p
+              title={caption}
+              className="h-4 min-w-0 flex-1 truncate text-xs leading-4 font-medium text-white"
+            >
+              {caption}
+            </p>
+            {several && (
+              <span aria-hidden className="flex shrink-0 gap-1.5">
+                {media.map((entry, index) => (
+                  <span
+                    key={`${entry.url}-${index}`}
+                    className={`size-1.5 rounded-full transition-colors ${index === current ? 'bg-foam' : 'bg-foam/35'}`}
+                  />
+                ))}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
       {children}
     </div>
   );

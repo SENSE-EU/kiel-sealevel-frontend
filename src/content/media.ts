@@ -21,6 +21,7 @@ export function cardMedia(hotspot: Hotspot): CardMedia[] {
       kind: 'image' as const,
       url: image.url,
       alt: image.alt,
+      caption: image.caption,
     })),
   ];
 }
